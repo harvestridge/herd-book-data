@@ -471,7 +471,7 @@
 
 <script>
 /* ============ CONFIG ============ */
-const API_URL = 'PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE';
+const API_URL = 'https://script.google.com/macros/s/AKfycbzwyIlEwAPZ1k_bvjPp9Rg8tzjhYM6seYwwjkqpgV0UoblPk43edmp6OeF99cCqtTusxQ/exec';
 const GESTATION_DAYS = 283;
 const CACHE_KEY = 'herdbook_cache_v2';
 
@@ -771,7 +771,7 @@ function renderDetail(animalId){
       view.screen = 'home'; view.animalId = null;
       await loadAll();
     } else {
-      showToast('Could not save — try again');
+      showToast(res && res.error ? ('Error: ' + res.error) : 'Could not save — try again');
     }
   });
 }
@@ -839,7 +839,7 @@ $('saveCowBtn').addEventListener('click', async ()=>{
     await loadAll();
     if(id){ view.screen='detail'; view.animalId=id; render(); }
   } else {
-    showToast('Could not save — try again');
+    showToast(res && res.error ? ('Error: ' + res.error) : 'Could not save — try again');
   }
 });
 
@@ -935,7 +935,7 @@ $('saveBreedBtn').addEventListener('click', async ()=>{
   }
   if(!res || !res.success){
     $('saveBreedBtn').textContent = 'Save Record';
-    showToast('Could not save — try again');
+    showToast(res && res.error ? ('Error: ' + res.error) : 'Could not save — try again');
     return;
   }
   const recordId = id || res.RecordID;
@@ -993,7 +993,7 @@ $('saveHealthBtn').addEventListener('click', async ()=>{
     await loadAll();
     view.screen='detail'; view.animalId=animalId; render();
   } else {
-    showToast('Could not save — try again');
+    showToast(res && res.error ? ('Error: ' + res.error) : 'Could not save — try again');
   }
 });
 
