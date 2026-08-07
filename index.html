@@ -34,7 +34,7 @@
   header.top{
     position:sticky; top:0; z-index:10;
     background:var(--bg);
-    padding:22px 20px 14px;
+    padding:22px 20px 0;
     border-bottom:1px solid var(--line);
   }
   header.top h1{
@@ -47,9 +47,25 @@
   header.top .sub{
     font-size:13px;
     color:var(--ink-soft);
+    margin-bottom:14px;
   }
+  .tabs{
+    display:flex;
+    gap:4px;
+  }
+  .tab{
+    flex:1;
+    text-align:center;
+    padding:10px 6px;
+    font-size:13.5px;
+    font-weight:600;
+    color:var(--ink-soft);
+    border-bottom:2.5px solid transparent;
+    cursor:pointer;
+  }
+  .tab.active{ color:var(--ink); border-bottom-color:var(--rust); }
   .search{
-    margin-top:14px;
+    padding:12px 0 14px;
     display:flex;
     gap:8px;
   }
@@ -111,6 +127,13 @@
     border:1.5px solid var(--ink);
     border-radius:50%;
   }
+  .cow-photo{
+    flex:none;
+    width:46px;height:46px;
+    border-radius:50%;
+    object-fit:cover;
+    border:1.5px solid var(--ink);
+  }
   .cow-info{flex:1; min-width:0;}
   .cow-name{font-weight:600; font-size:16px;}
   .cow-genetics{font-size:12.5px; color:var(--ink-soft); margin-top:1px;}
@@ -128,6 +151,8 @@
   .pill.lost{background:var(--rust-soft); color:var(--rust);}
   .pill.calved{background:var(--green-soft); color:var(--green);}
   .pill.due{background:var(--rust-soft); color:var(--rust);}
+  .pill.sold{background:var(--slate-soft); color:var(--slate);}
+  .pill.deceased{background:var(--rust-soft); color:var(--rust);}
   .chev{color:var(--line); font-size:20px;}
 
   .fab{
@@ -143,6 +168,7 @@
     box-shadow:0 6px 18px rgba(43,42,37,0.3);
     z-index:20;
   }
+  .fab.hidden{display:none;}
 
   .sheet-backdrop{
     position:fixed; inset:0;
@@ -211,6 +237,11 @@
   .btn-primary{background:var(--ink); color:var(--bg); margin-top:6px;}
   .btn-secondary{background:transparent; color:var(--ink-soft); margin-top:8px; border:1px solid var(--line);}
   .btn-danger{background:transparent; color:var(--rust); margin-top:8px; border:1px solid var(--rust-soft);}
+  .btn-small{
+    width:auto; padding:8px 14px; font-size:13px;
+    background:var(--card); color:var(--ink); border:1px solid var(--line); border-radius:10px;
+    cursor:pointer; font-weight:600; font-family:'Inter',sans-serif;
+  }
 
   .detail-header{
     display:flex; align-items:center; gap:14px; margin-bottom:6px;
@@ -219,12 +250,34 @@
     border:none; background:none; font-size:22px; color:var(--ink);
     padding:4px 8px 4px 0; cursor:pointer;
   }
-  .detail-name{font-family:'Bitter',serif; font-weight:700; font-size:22px;}
+  .detail-name{font-family:'Bitter',serif; font-weight:700; font-size:22px; display:flex; align-items:center; gap:8px;}
+  .sex-badge{
+    font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.04em;
+    padding:2px 8px; border-radius:20px; background:var(--gray-soft); color:var(--ink-soft);
+  }
   .detail-genetics{color:var(--ink-soft); font-size:13.5px; margin:2px 0 0;}
+  .detail-photo-wrap{ margin:14px 0 4px; position:relative; }
+  .detail-photo{
+    width:100%; max-height:280px; object-fit:cover;
+    border-radius:14px; border:1px solid var(--line); display:block;
+  }
+  .detail-photo-placeholder{
+    width:100%; height:150px; border-radius:14px;
+    border:2px dashed var(--line);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    color:var(--ink-soft); font-size:13.5px; gap:6px;
+  }
+  .photo-btn-row{ display:flex; gap:8px; margin-top:8px; }
+  .photo-btn-row .btn-small{ flex:1; }
+  .detail-meta-row{
+    display:flex; gap:14px; flex-wrap:wrap;
+    font-size:12.5px; color:var(--ink-soft); margin-top:10px;
+  }
   .section-label{
     font-size:12px; font-weight:600; text-transform:uppercase;
     letter-spacing:.05em; color:var(--ink-soft);
     margin:22px 0 10px;
+    display:flex; justify-content:space-between; align-items:center;
   }
   .record{
     background:var(--card);
@@ -238,6 +291,39 @@
   .record-date{font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:var(--ink-soft);}
   .record-sire{font-size:14px; margin-top:3px;}
   .record-meta{font-size:12px; color:var(--ink-soft); margin-top:4px;}
+  .record-calves{font-size:12px; color:var(--green); margin-top:4px; font-weight:600;}
+
+  .health-entry{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:10px 14px;
+    margin-bottom:8px;
+  }
+  .health-date{font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--ink-soft);}
+  .health-note{font-size:14px; margin-top:2px;}
+
+  .status-box{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:14px;
+    margin-top:22px;
+  }
+  .calf-row{
+    display:flex; gap:8px; align-items:flex-end; margin-bottom:10px;
+    padding-bottom:10px; border-bottom:1px solid var(--line);
+  }
+  .calf-row:last-child{border-bottom:none;}
+  .calf-row .field{flex:1; margin-bottom:0;}
+  .calf-remove{
+    flex:none; border:none; background:none; color:var(--rust);
+    font-size:20px; cursor:pointer; padding:0 4px 11px;
+  }
+  .add-calf-link{
+    font-size:13.5px; font-weight:600; color:var(--slate);
+    background:none; border:none; cursor:pointer; padding:4px 0 10px;
+  }
 
   .toast{
     position:fixed; left:50%; bottom:100px; transform:translateX(-50%);
@@ -256,7 +342,12 @@
 
 <header class="top" id="topHeader">
   <h1>Herd Book</h1>
-  <div class="sub" id="headerSub">Breeding &amp; calving records</div>
+  <div class="sub">Breeding &amp; calving records</div>
+  <div class="tabs" id="tabs">
+    <div class="tab active" data-tab="female">Females</div>
+    <div class="tab" data-tab="male">Males</div>
+    <div class="tab" data-tab="archive">Archive</div>
+  </div>
   <div class="search" id="searchWrap">
     <input type="text" id="searchInput" placeholder="Search by name or ear tag...">
   </div>
@@ -270,11 +361,12 @@
 
 <div class="sheet-backdrop" id="backdrop"></div>
 
-<!-- Add/Edit Cow Sheet -->
+<!-- Add/Edit Animal Sheet -->
 <div class="sheet" id="cowSheet">
   <div class="sheet-handle"></div>
-  <h2 id="cowSheetTitle">Add Cow</h2>
+  <h2 id="cowSheetTitle">Add Animal</h2>
   <input type="hidden" id="cowId">
+  <input type="hidden" id="cowSex">
   <div class="field">
     <label>Name / ID</label>
     <input type="text" id="cowName" placeholder="e.g. Daisy or Tag #14">
@@ -283,11 +375,21 @@
     <label>Genetics</label>
     <input type="text" id="cowGenetics" placeholder="e.g. Angus x Hereford">
   </div>
+  <div class="row2">
+    <div class="field">
+      <label>Weaning Date</label>
+      <input type="date" id="cowWeaning">
+    </div>
+    <div class="field conditional" id="castrationField">
+      <label>Castration Date</label>
+      <input type="date" id="cowCastration">
+    </div>
+  </div>
   <div class="field">
     <label>Notes</label>
     <textarea id="cowNotes" placeholder="Optional"></textarea>
   </div>
-  <button class="btn btn-primary" id="saveCowBtn">Save Cow</button>
+  <button class="btn btn-primary" id="saveCowBtn">Save</button>
   <button class="btn btn-secondary" id="cancelCowBtn">Cancel</button>
 </div>
 
@@ -297,9 +399,15 @@
   <h2 id="breedSheetTitle">New Breeding Record</h2>
   <input type="hidden" id="breedId">
   <input type="hidden" id="breedAnimalId">
-  <div class="field">
-    <label>Bred To (Sire)</label>
-    <input type="text" id="sireInput" placeholder="Bull name / registration">
+  <div class="row2">
+    <div class="field">
+      <label>Bred To (Sire)</label>
+      <input type="text" id="sireInput" placeholder="Bull name / registration">
+    </div>
+    <div class="field">
+      <label>Sire Breed</label>
+      <input type="text" id="breedInput" placeholder="e.g. Angus">
+    </div>
   </div>
   <div class="row2">
     <div class="field">
@@ -323,20 +431,14 @@
     </select>
   </div>
   <div class="conditional" id="calvedFields">
-    <div class="row2">
-      <div class="field">
-        <label>Actual Calving Date</label>
-        <input type="date" id="actualCalving">
-      </div>
-      <div class="field">
-        <label>Calf Sex</label>
-        <select id="calfSex">
-          <option value="">—</option>
-          <option value="Heifer (F)">Heifer (F)</option>
-          <option value="Bull (M)">Bull (M)</option>
-        </select>
-      </div>
+    <div class="field">
+      <label>Actual Calving Date</label>
+      <input type="date" id="actualCalving">
     </div>
+    <div id="existingCalves"></div>
+    <label style="display:block; font-size:12px; font-weight:600; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.04em; margin-bottom:5px;">Calves</label>
+    <div id="calfRows"></div>
+    <button type="button" class="add-calf-link" id="addCalfBtn">+ Add another calf (twins)</button>
   </div>
   <div class="field">
     <label>Notes</label>
@@ -346,18 +448,37 @@
   <button class="btn btn-secondary" id="cancelBreedBtn">Cancel</button>
 </div>
 
+<!-- Add Health Log Sheet -->
+<div class="sheet" id="healthSheet">
+  <div class="sheet-handle"></div>
+  <h2>Add Health Record</h2>
+  <input type="hidden" id="healthAnimalId">
+  <div class="field">
+    <label>Date</label>
+    <input type="date" id="healthDate">
+  </div>
+  <div class="field">
+    <label>Note</label>
+    <textarea id="healthNote" placeholder="e.g. Dewormed, vaccinated, treated for pinkeye..."></textarea>
+  </div>
+  <button class="btn btn-primary" id="saveHealthBtn">Save</button>
+  <button class="btn btn-secondary" id="cancelHealthBtn">Cancel</button>
+</div>
+
+<input type="file" id="photoInput" accept="image/*" capture="environment" style="display:none;">
+
 <div class="toast" id="toast"></div>
 
 <script>
 /* ============ CONFIG ============ */
-// Paste your Apps Script Web App URL here after deploying Code.gs
-const API_URL = 'https://script.google.com/macros/s/AKfycbzwyIlEwAPZ1k_bvjPp9Rg8tzjhYM6seYwwjkqpgV0UoblPk43edmp6OeF99cCqtTusxQ/exec';
+const API_URL = 'PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE';
 const GESTATION_DAYS = 283;
-const CACHE_KEY = 'herdbook_cache_v1';
+const CACHE_KEY = 'herdbook_cache_v2';
 
 /* ============ STATE ============ */
-let state = { animals: [], breeding: [] };
-let view = { screen: 'home', animalId: null };
+let state = { animals: [], breeding: [], calves: [], health: [] };
+let view = { screen: 'home', animalId: null, tab: 'female' };
+let calfRowCount = 0;
 
 /* ============ HELPERS ============ */
 function $(id){ return document.getElementById(id); }
@@ -383,15 +504,16 @@ function showToast(msg){
   t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'), 2200);
 }
-function saveCache(){
-  try{ localStorage.setItem(CACHE_KEY, JSON.stringify(state)); }catch(e){}
-}
+function saveCache(){ try{ localStorage.setItem(CACHE_KEY, JSON.stringify(state)); }catch(e){} }
 function loadCache(){
   try{
     const c = localStorage.getItem(CACHE_KEY);
     if(c){ state = JSON.parse(c); return true; }
   }catch(e){}
   return false;
+}
+function escapeHtml(s){
+  return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
 /* ============ API ============ */
@@ -432,6 +554,9 @@ function latestBreedingFor(animalId){
   if(!recs.length) return null;
   return recs.slice().sort((a,b)=> new Date(b.DateBred) - new Date(a.DateBred))[0];
 }
+function calvesForRecord(recordId){
+  return state.calves.filter(c => String(c.RecordID) === String(recordId));
+}
 function statusPillHtml(rec){
   if(!rec) return '<span class="pill open">No records</span>';
   const r = rec.Result || 'Bred';
@@ -447,38 +572,58 @@ function statusPillHtml(rec){
   }
   return html;
 }
+function lifecycleStatusPill(animal){
+  if(animal.Status === 'Sold') return '<span class="pill sold">Sold</span>';
+  if(animal.Status === 'Deceased') return '<span class="pill deceased">Deceased</span>';
+  return '';
+}
 
-/* ============ RENDER: HOME ============ */
+/* ============ RENDER ============ */
 function render(){
   if(view.screen === 'home') renderHome();
   else if(view.screen === 'detail') renderDetail(view.animalId);
 }
 
+function animalsForTab(){
+  const q = ($('searchInput') && $('searchInput').value || '').toLowerCase();
+  let list = state.animals.filter(a => !q || (a.Name||'').toLowerCase().includes(q) || String(a.AnimalID).includes(q));
+  if(view.tab === 'archive'){
+    list = list.filter(a => a.Status === 'Sold' || a.Status === 'Deceased');
+  } else {
+    list = list.filter(a => (a.Status||'Active') === 'Active');
+    list = list.filter(a => (a.Sex||'Female') === (view.tab === 'male' ? 'Male' : 'Female'));
+  }
+  return list.sort((a,b) => (a.Name||'').localeCompare(b.Name||''));
+}
+
 function renderHome(){
   $('topHeader').style.display = 'block';
-  const q = ($('searchInput').value || '').toLowerCase();
-  const animals = state.animals
-    .filter(a => a.Active !== 'N')
-    .filter(a => !q || (a.Name||'').toLowerCase().includes(q) || String(a.AnimalID).includes(q))
-    .sort((a,b) => (a.Name||'').localeCompare(b.Name||''));
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === view.tab));
+  $('fabAdd').classList.toggle('hidden', view.tab === 'archive');
+
+  const animals = animalsForTab();
 
   if(!animals.length){
-    $('main').innerHTML = `<div class="empty">
-      <div class="tag">＋</div><br>
-      No cows yet.<br>Tap the + button to add your first one.
-    </div>`;
+    const msg = view.tab === 'archive'
+      ? 'No sold or deceased animals yet.'
+      : `No ${view.tab === 'male' ? 'bulls/steers' : 'cows'} yet.<br>Tap the + button to add one.`;
+    $('main').innerHTML = `<div class="empty"><div class="tag">＋</div><br>${msg}</div>`;
     return;
   }
 
   let html = '<div class="cow-list">';
   animals.forEach(a => {
     const rec = latestBreedingFor(a.AnimalID);
+    const statusHtml = view.tab === 'archive' ? lifecycleStatusPill(a) : statusPillHtml(rec);
+    const avatar = a.PhotoUrl
+      ? `<img class="cow-photo" src="${escapeHtml(a.PhotoUrl)}" alt="">`
+      : `<div class="ear-tag">${a.AnimalID}</div>`;
     html += `<div class="cow-card" data-id="${a.AnimalID}">
-      <div class="ear-tag">${a.AnimalID}</div>
+      ${avatar}
       <div class="cow-info">
         <div class="cow-name">${escapeHtml(a.Name)}</div>
         <div class="cow-genetics">${escapeHtml(a.Genetics||'—')}</div>
-        <div class="cow-status">${statusPillHtml(rec)}</div>
+        <div class="cow-status">${statusHtml}</div>
       </div>
       <div class="chev">›</div>
     </div>`;
@@ -488,83 +633,180 @@ function renderHome(){
 
   document.querySelectorAll('.cow-card').forEach(el=>{
     el.addEventListener('click', ()=>{
-      view = { screen:'detail', animalId: el.dataset.id };
+      view.screen = 'detail'; view.animalId = el.dataset.id;
       render();
     });
   });
 }
 
-/* ============ RENDER: DETAIL ============ */
 function renderDetail(animalId){
   $('topHeader').style.display = 'none';
+  $('fabAdd').classList.add('hidden');
   const a = state.animals.find(x => String(x.AnimalID) === String(animalId));
   if(!a){ view.screen='home'; render(); return; }
+  const isFemale = (a.Sex||'Female') === 'Female';
 
   const recs = state.breeding
     .filter(b => String(b.AnimalID) === String(animalId))
     .sort((x,y) => new Date(y.DateBred) - new Date(x.DateBred));
+  const healthEntries = state.health
+    .filter(h => String(h.AnimalID) === String(animalId))
+    .sort((x,y) => new Date(y.Date) - new Date(x.Date));
+
+  let metaRow = '';
+  if(a.WeaningDate) metaRow += `<span>Weaned ${fmtDate(a.WeaningDate)}</span>`;
+  if(!isFemale && a.CastrationDate) metaRow += `<span>Castrated ${fmtDate(a.CastrationDate)}</span>`;
 
   let html = `
     <div class="detail-header">
       <button class="back-btn" id="backBtn">‹</button>
       <div>
-        <div class="detail-name">${escapeHtml(a.Name)}</div>
+        <div class="detail-name">${escapeHtml(a.Name)} <span class="sex-badge">${isFemale?'Female':'Male'}</span> ${lifecycleStatusPill(a)}</div>
         <div class="detail-genetics">${escapeHtml(a.Genetics||'—')} · Tag ${a.AnimalID}</div>
       </div>
     </div>
+    <div class="detail-photo-wrap">
+      ${a.PhotoUrl
+        ? `<img class="detail-photo" src="${escapeHtml(a.PhotoUrl)}" alt="${escapeHtml(a.Name)}">`
+        : `<div class="detail-photo-placeholder">No photo yet</div>`}
+      <div class="photo-btn-row">
+        <button class="btn-small" id="photoBtn">${a.PhotoUrl ? 'Change Photo' : '+ Add Photo'}</button>
+      </div>
+    </div>
     ${a.Notes ? `<div class="hint" style="margin-top:8px;">${escapeHtml(a.Notes)}</div>` : ''}
-    <div class="section-label">Breeding History</div>`;
+    ${metaRow ? `<div class="detail-meta-row">${metaRow}</div>` : ''}
+  `;
 
-  if(!recs.length){
-    html += `<div class="hint">No breeding records yet.</div>`;
+  if(isFemale){
+    html += `<div class="section-label">Breeding History
+      <button class="btn-small" id="addBreedBtn">+ Add Record</button>
+    </div>`;
+    if(!recs.length){
+      html += `<div class="hint">No breeding records yet.</div>`;
+    } else {
+      recs.forEach(r => {
+        const calves = calvesForRecord(r.RecordID);
+        let calfLine = '';
+        if(calves.length){
+          calfLine = `<div class="record-calves">${calves.map(c=>`${escapeHtml(c.Name||'Unnamed')} (${escapeHtml(c.Sex||'?')})`).join(', ')}</div>`;
+        }
+        html += `<div class="record" data-id="${r.RecordID}">
+          <div class="record-top">
+            <div class="record-date">${fmtDate(r.DateBred)}</div>
+            ${statusPillHtml(r)}
+          </div>
+          <div class="record-sire">Sire: ${escapeHtml(r.Sire||'—')}${r.Breed ? ' ('+escapeHtml(r.Breed)+')' : ''}</div>
+          <div class="record-meta">Est. calving ${fmtDate(r.EstCalvingDate)}</div>
+          ${calfLine}
+        </div>`;
+      });
+    }
+  }
+
+  html += `<div class="section-label">Health Record
+    <button class="btn-small" id="addHealthBtn">+ Add Entry</button>
+  </div>`;
+  if(!healthEntries.length){
+    html += `<div class="hint">No health entries yet.</div>`;
   } else {
-    recs.forEach(r => {
-      html += `<div class="record" data-id="${r.RecordID}">
-        <div class="record-top">
-          <div class="record-date">${fmtDate(r.DateBred)}</div>
-          ${statusPillHtml(r)}
-        </div>
-        <div class="record-sire">Sire: ${escapeHtml(r.Sire||'—')}</div>
-        <div class="record-meta">
-          Est. calving ${fmtDate(r.EstCalvingDate)}
-          ${r.Result==='Calved' ? ` · Calved ${fmtDate(r.ActualCalvingDate)} · ${escapeHtml(r.CalfSex||'')}` : ''}
-        </div>
+    healthEntries.forEach(h => {
+      html += `<div class="health-entry">
+        <div class="health-date">${fmtDate(h.Date)}</div>
+        <div class="health-note">${escapeHtml(h.Note)}</div>
       </div>`;
     });
   }
 
-  html += `<button class="btn btn-secondary" id="editCowBtn" style="margin-top:20px;">Edit Cow Details</button>`;
-  $('main').innerHTML = html;
+  html += `<button class="btn btn-secondary" id="editCowBtn" style="margin-top:20px;">Edit Details</button>`;
 
-  $('backBtn').addEventListener('click', ()=>{ view={screen:'home',animalId:null}; render(); });
+  html += `<div class="status-box">
+    <div class="field" style="margin-bottom:10px;">
+      <label>Lifecycle Status</label>
+      <select id="lifecycleStatus">
+        <option value="Active" ${a.Status!=='Sold'&&a.Status!=='Deceased'?'selected':''}>Active (in herd)</option>
+        <option value="Sold" ${a.Status==='Sold'?'selected':''}>Sold</option>
+        <option value="Deceased" ${a.Status==='Deceased'?'selected':''}>Deceased</option>
+      </select>
+    </div>
+    <div class="field conditional" id="statusDateField">
+      <label>Date</label>
+      <input type="date" id="statusDate" value="${a.StatusDate||''}">
+    </div>
+    <button class="btn btn-secondary" id="saveStatusBtn" style="margin-top:0;">Save Status</button>
+  </div>`;
+
+  $('main').innerHTML = html;
+  document.getElementById('statusDateField').classList.toggle('show', a.Status==='Sold'||a.Status==='Deceased');
+
+  $('backBtn').addEventListener('click', ()=>{ view.screen='home'; view.animalId=null; render(); });
   $('editCowBtn').addEventListener('click', ()=> openCowSheet(a));
+  $('photoBtn').addEventListener('click', ()=>{
+    $('photoInput').dataset.animalId = a.AnimalID;
+    $('photoInput').click();
+  });
+  const addBreedBtn = $('addBreedBtn');
+  if(addBreedBtn) addBreedBtn.addEventListener('click', ()=> openBreedSheet(a, null));
+  $('addHealthBtn').addEventListener('click', ()=> openHealthSheet(a));
+
   document.querySelectorAll('.record').forEach(el=>{
     el.addEventListener('click', ()=>{
       const rec = recs.find(r => String(r.RecordID) === el.dataset.id);
       openBreedSheet(a, rec);
     });
   });
+
+  $('lifecycleStatus').addEventListener('change', ()=>{
+    const v = $('lifecycleStatus').value;
+    $('statusDateField').classList.toggle('show', v==='Sold'||v==='Deceased');
+  });
+
+  $('saveStatusBtn').addEventListener('click', async ()=>{
+    const status = $('lifecycleStatus').value;
+    const statusDate = $('statusDate').value;
+    $('saveStatusBtn').textContent = 'Saving...';
+    const res = await apiCall('updateAnimal', { AnimalID: a.AnimalID, Status: status, StatusDate: (status==='Active'?'':statusDate) });
+    $('saveStatusBtn').textContent = 'Save Status';
+    if(res && res.success){
+      showToast('Status updated');
+      view.screen = 'home'; view.animalId = null;
+      await loadAll();
+    } else {
+      showToast('Could not save — try again');
+    }
+  });
 }
 
-function escapeHtml(s){
-  return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-}
+/* ============ TABS ============ */
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('click', ()=>{
+    view.tab = t.dataset.tab;
+    view.screen = 'home';
+    renderHome();
+  });
+});
 
-/* ============ SHEETS ============ */
+/* ============ SHEETS: shared ============ */
 function openBackdrop(){ $('backdrop').classList.add('show'); }
 function closeSheets(){
   $('backdrop').classList.remove('show');
   $('cowSheet').classList.remove('show');
   $('breedSheet').classList.remove('show');
+  $('healthSheet').classList.remove('show');
 }
 $('backdrop').addEventListener('click', closeSheets);
 
+/* ============ COW SHEET ============ */
 function openCowSheet(animal){
-  $('cowSheetTitle').textContent = animal ? 'Edit Cow' : 'Add Cow';
+  const sexForNew = view.tab === 'male' ? 'Male' : 'Female';
+  $('cowSheetTitle').textContent = animal ? 'Edit Details' : (sexForNew==='Male' ? 'Add Bull/Steer' : 'Add Cow');
   $('cowId').value = animal ? animal.AnimalID : '';
+  $('cowSex').value = animal ? (animal.Sex||'Female') : sexForNew;
   $('cowName').value = animal ? animal.Name : '';
   $('cowGenetics').value = animal ? animal.Genetics : '';
+  $('cowWeaning').value = animal ? (animal.WeaningDate||'') : '';
+  $('cowCastration').value = animal ? (animal.CastrationDate||'') : '';
   $('cowNotes').value = animal ? animal.Notes : '';
+  $('castrationField').classList.toggle('show', $('cowSex').value === 'Male');
   openBackdrop();
   $('cowSheet').classList.add('show');
 }
@@ -574,7 +816,14 @@ $('saveCowBtn').addEventListener('click', async ()=>{
   const name = $('cowName').value.trim();
   if(!name){ showToast('Enter a name'); return; }
   const id = $('cowId').value;
-  const payload = { Name:name, Genetics:$('cowGenetics').value.trim(), Notes:$('cowNotes').value.trim() };
+  const payload = {
+    Name:name,
+    Genetics:$('cowGenetics').value.trim(),
+    Notes:$('cowNotes').value.trim(),
+    WeaningDate:$('cowWeaning').value,
+    CastrationDate:$('cowCastration').value,
+    Sex:$('cowSex').value
+  };
   $('saveCowBtn').textContent = 'Saving...';
   let res;
   if(id){
@@ -583,27 +832,62 @@ $('saveCowBtn').addEventListener('click', async ()=>{
   } else {
     res = await apiCall('addAnimal', payload);
   }
-  $('saveCowBtn').textContent = 'Save Cow';
+  $('saveCowBtn').textContent = 'Save';
   if(res && res.success){
     closeSheets();
     showToast('Saved');
     await loadAll();
+    if(id){ view.screen='detail'; view.animalId=id; render(); }
   } else {
     showToast('Could not save — try again');
   }
 });
+
+/* ============ BREEDING SHEET ============ */
+function addCalfRow(name, sex){
+  calfRowCount++;
+  const rowId = 'calfRow' + calfRowCount;
+  const div = document.createElement('div');
+  div.className = 'calf-row';
+  div.id = rowId;
+  div.innerHTML = `
+    <div class="field">
+      <label>Calf Name / ID</label>
+      <input type="text" class="calfName" value="${escapeHtml(name||'')}" placeholder="Optional">
+    </div>
+    <div class="field">
+      <label>Sex</label>
+      <select class="calfSex">
+        <option value="">—</option>
+        <option value="Heifer (F)" ${sex==='Heifer (F)'?'selected':''}>Heifer (F)</option>
+        <option value="Bull (M)" ${sex==='Bull (M)'?'selected':''}>Bull (M)</option>
+      </select>
+    </div>
+    <button type="button" class="calf-remove" onclick="document.getElementById('${rowId}').remove()">×</button>
+  `;
+  $('calfRows').appendChild(div);
+}
 
 function openBreedSheet(animal, rec){
   $('breedSheetTitle').textContent = rec ? 'Edit Breeding Record' : `New Record — ${animal.Name}`;
   $('breedId').value = rec ? rec.RecordID : '';
   $('breedAnimalId').value = animal.AnimalID;
   $('sireInput').value = rec ? rec.Sire : '';
+  $('breedInput').value = rec ? (rec.Breed||'') : '';
   $('dateBred').value = rec ? rec.DateBred : new Date().toISOString().slice(0,10);
   $('estCalving').value = rec ? rec.EstCalvingDate : addDays($('dateBred').value, GESTATION_DAYS);
   $('resultSelect').value = rec ? (rec.Result||'Bred') : 'Bred';
   $('actualCalving').value = rec ? (rec.ActualCalvingDate||'') : '';
-  $('calfSex').value = rec ? (rec.CalfSex||'') : '';
   $('breedNotes').value = rec ? (rec.Notes||'') : '';
+
+  $('calfRows').innerHTML = '';
+  $('existingCalves').innerHTML = '';
+  if(rec){
+    const existing = calvesForRecord(rec.RecordID);
+    if(existing.length){
+      $('existingCalves').innerHTML = `<div class="hint" style="margin-bottom:8px;">Already recorded: ${existing.map(c=>escapeHtml(c.Name||'Unnamed')+' ('+escapeHtml(c.Sex||'?')+')').join(', ')}</div>`;
+    }
+  }
   toggleCalvedFields();
   openBackdrop();
   $('breedSheet').classList.add('show');
@@ -616,9 +900,14 @@ $('dateBred').addEventListener('change', ()=>{
   }
 });
 function toggleCalvedFields(){
-  $('calvedFields').classList.toggle('show', $('resultSelect').value === 'Calved');
+  const show = $('resultSelect').value === 'Calved';
+  $('calvedFields').classList.toggle('show', show);
+  if(show && $('calfRows').children.length === 0){
+    addCalfRow('', '');
+  }
 }
 $('resultSelect').addEventListener('change', toggleCalvedFields);
+$('addCalfBtn').addEventListener('click', ()=> addCalfRow('',''));
 
 $('saveBreedBtn').addEventListener('click', async ()=>{
   const animalId = $('breedAnimalId').value;
@@ -629,10 +918,10 @@ $('saveBreedBtn').addEventListener('click', async ()=>{
     AnimalName: animal ? animal.Name : '',
     DateBred: $('dateBred').value,
     Sire: $('sireInput').value.trim(),
+    Breed: $('breedInput').value.trim(),
     EstCalvingDate: $('estCalving').value,
     Result: $('resultSelect').value,
     ActualCalvingDate: $('actualCalving').value,
-    CalfSex: $('calfSex').value,
     Notes: $('breedNotes').value.trim()
   };
   const id = $('breedId').value;
@@ -644,24 +933,116 @@ $('saveBreedBtn').addEventListener('click', async ()=>{
   } else {
     res = await apiCall('addBreeding', payload);
   }
+  if(!res || !res.success){
+    $('saveBreedBtn').textContent = 'Save Record';
+    showToast('Could not save — try again');
+    return;
+  }
+  const recordId = id || res.RecordID;
+
+  if($('resultSelect').value === 'Calved'){
+    const calfRows = Array.from(document.querySelectorAll('#calfRows .calf-row'));
+    const calves = calfRows.map(row => ({
+      Name: row.querySelector('.calfName').value.trim(),
+      Sex: row.querySelector('.calfSex').value,
+      BirthDate: $('actualCalving').value
+    })).filter(c => c.Name || c.Sex);
+
+    if(calves.length){
+      await apiCall('addCalves', {
+        RecordID: recordId,
+        DamID: animalId,
+        DamGenetics: animal ? animal.Genetics : '',
+        Breed: payload.Breed,
+        calves: calves
+      });
+    }
+  }
+
   $('saveBreedBtn').textContent = 'Save Record';
+  closeSheets();
+  showToast('Saved');
+  await loadAll();
+  view.screen='detail'; view.animalId=animalId; render();
+});
+
+/* ============ HEALTH SHEET ============ */
+function openHealthSheet(animal){
+  $('healthAnimalId').value = animal.AnimalID;
+  $('healthDate').value = new Date().toISOString().slice(0,10);
+  $('healthNote').value = '';
+  openBackdrop();
+  $('healthSheet').classList.add('show');
+}
+$('cancelHealthBtn').addEventListener('click', closeSheets);
+
+$('saveHealthBtn').addEventListener('click', async ()=>{
+  const note = $('healthNote').value.trim();
+  if(!note){ showToast('Enter a note'); return; }
+  const animalId = $('healthAnimalId').value;
+  $('saveHealthBtn').textContent = 'Saving...';
+  const res = await apiCall('addHealthLog', {
+    AnimalID: animalId,
+    Date: $('healthDate').value,
+    Note: note
+  });
+  $('saveHealthBtn').textContent = 'Save';
   if(res && res.success){
     closeSheets();
     showToast('Saved');
     await loadAll();
+    view.screen='detail'; view.animalId=animalId; render();
   } else {
     showToast('Could not save — try again');
   }
 });
 
+/* ============ PHOTOS ============ */
+function compressImage(file, maxDim, quality){
+  return new Promise((resolve, reject)=>{
+    const img = new Image();
+    const reader = new FileReader();
+    reader.onload = () => { img.src = reader.result; };
+    reader.onerror = reject;
+    img.onload = () => {
+      let w = img.width, h = img.height;
+      if(w > h && w > maxDim){ h = Math.round(h * (maxDim/w)); w = maxDim; }
+      else if(h > maxDim){ w = Math.round(w * (maxDim/h)); h = maxDim; }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const dataUrl = canvas.toDataURL('image/jpeg', quality);
+      resolve(dataUrl.split(',')[1]); // strip the data: prefix, keep raw base64
+    };
+    img.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+$('photoInput').addEventListener('change', async (e)=>{
+  const file = e.target.files[0];
+  const animalId = $('photoInput').dataset.animalId;
+  if(!file || !animalId) return;
+  showToast('Uploading photo...');
+  try{
+    const base64 = await compressImage(file, 1000, 0.75);
+    const res = await apiCall('uploadPhoto', { AnimalID: animalId, ImageData: base64, MimeType: 'image/jpeg' });
+    if(res && res.success){
+      showToast('Photo saved');
+      await loadAll();
+      view.screen = 'detail'; view.animalId = animalId; render();
+    } else {
+      showToast('Could not upload — try again');
+    }
+  }catch(err){
+    showToast('Could not process that image');
+  }
+  $('photoInput').value = '';
+});
+
 /* ============ FAB ============ */
 $('fabAdd').addEventListener('click', ()=>{
-  if(view.screen === 'home'){
-    openCowSheet(null);
-  } else {
-    const a = state.animals.find(x => String(x.AnimalID) === String(view.animalId));
-    if(a) openBreedSheet(a, null);
-  }
+  if(view.screen === 'home') openCowSheet(null);
 });
 
 /* ============ SEARCH ============ */
