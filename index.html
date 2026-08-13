@@ -79,6 +79,20 @@
     font-family:'Inter',sans-serif;
     color:var(--ink);
   }
+  .controls{
+    display:flex; gap:8px;
+    padding-bottom:14px;
+  }
+  .controls select{
+    flex:1;
+    border:1px solid var(--line);
+    background:var(--card);
+    border-radius:10px;
+    padding:9px 10px;
+    font-size:13px;
+    font-family:'Inter',sans-serif;
+    color:var(--ink);
+  }
   main{padding:16px 16px 20px;}
   .empty{
     text-align:center;
@@ -234,6 +248,8 @@
     font-family:'Inter',sans-serif;
     cursor:pointer;
   }
+  .btn:disabled{ opacity:0.55; cursor:default; }
+  .btn-small:disabled{ opacity:0.55; cursor:default; }
   .btn-primary{background:var(--ink); color:var(--bg); margin-top:6px;}
   .btn-secondary{background:transparent; color:var(--ink-soft); margin-top:8px; border:1px solid var(--line);}
   .btn-danger{background:transparent; color:var(--rust); margin-top:8px; border:1px solid var(--rust-soft);}
@@ -351,6 +367,10 @@
   <div class="search" id="searchWrap">
     <input type="text" id="searchInput" placeholder="Search by name or ear tag...">
   </div>
+  <div class="controls" id="controlsWrap">
+    <select id="sortSelect"></select>
+    <select id="filterSelect" class="conditional"></select>
+  </div>
 </header>
 
 <main id="main">
@@ -371,9 +391,29 @@
     <label>Name / ID</label>
     <input type="text" id="cowName" placeholder="e.g. Daisy or Tag #14">
   </div>
+  <div class="row2">
+    <div class="field">
+      <label>Birth Date</label>
+      <input type="date" id="cowBirthDate">
+    </div>
+    <div class="field">
+      <label>Genetics</label>
+      <input type="text" id="cowGenetics" placeholder="e.g. Angus x Hereford">
+    </div>
+  </div>
   <div class="field">
-    <label>Genetics</label>
-    <input type="text" id="cowGenetics" placeholder="e.g. Angus x Hereford">
+    <label>Dam (Mother)</label>
+    <select id="cowDam"><option value="">— Unknown / not in herd —</option></select>
+  </div>
+  <div class="row2">
+    <div class="field">
+      <label>Sire Name</label>
+      <input type="text" id="cowSireName" placeholder="Bull name / registration">
+    </div>
+    <div class="field">
+      <label>Sire Breed</label>
+      <input type="text" id="cowSireBreed" placeholder="e.g. Angus">
+    </div>
   </div>
   <div class="row2">
     <div class="field">
@@ -446,6 +486,7 @@
   </div>
   <button class="btn btn-primary" id="saveBreedBtn">Save Record</button>
   <button class="btn btn-secondary" id="cancelBreedBtn">Cancel</button>
+  <button class="btn btn-danger conditional" id="deleteBreedBtn">Delete Record</button>
 </div>
 
 <!-- Add Health Log Sheet -->
@@ -465,13 +506,13 @@
   <button class="btn btn-secondary" id="cancelHealthBtn">Cancel</button>
 </div>
 
-<input type="file" id="photoInput" accept="image/*" capture="environment" style="display:none;">
+<input type="file" id="photoInput" accept="image/*" style="display:none;">
 
 <div class="toast" id="toast"></div>
 
 <script>
 /* ============ CONFIG ============ */
-const API_URL = 'https://script.google.com/macros/s/AKfycbzwyIlEwAPZ1k_bvjPp9Rg8tzjhYM6seYwwjkqpgV0UoblPk43edmp6OeF99cCqtTusxQ/exec';
+const API_URL = 'PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE';
 const GESTATION_DAYS = 283;
 const CACHE_KEY = 'herdbook_cache_v2';
 
@@ -593,20 +634,65 @@ function animalsForTab(){
     list = list.filter(a => (a.Status||'Active') === 'Active');
     list = list.filter(a => (a.Sex||'Female') === (view.tab === 'male' ? 'Male' : 'Female'));
   }
-  return list.sort((a,b) => (a.Name||'').localeCompare(b.Name||''));
+
+  if(view.tab === 'female' && view.filter && view.filter !== 'all'){
+    list = list.filter(a => {
+      const rec = latestBreedingFor(a.AnimalID);
+      if(view.filter === 'none') return !rec;
+      return rec && rec.Result === view.filter;
+    });
+  }
+
+  const sortKey = view.sort || 'name';
+  if(sortKey === 'birthdate'){
+    list = list.sort((a,b) => (a.BirthDate||'9999').localeCompare(b.BirthDate||'9999'));
+  } else if(sortKey === 'duedate'){
+    list = list.sort((a,b) => {
+      const da = (latestBreedingFor(a.AnimalID)||{}).EstCalvingDate || '9999';
+      const db = (latestBreedingFor(b.AnimalID)||{}).EstCalvingDate || '9999';
+      return da.localeCompare(db);
+    });
+  } else if(sortKey === 'statusdate'){
+    list = list.sort((a,b) => (a.StatusDate||'9999').localeCompare(b.StatusDate||'9999'));
+  } else {
+    list = list.sort((a,b) => (a.Name||'').localeCompare(b.Name||''));
+  }
+  return list;
+}
+
+function setupControls(){
+  const sortOptions = {
+    female: [['name','Sort: Name'],['birthdate','Sort: Birth Date'],['duedate','Sort: Due Date']],
+    male: [['name','Sort: Name'],['birthdate','Sort: Birth Date']],
+    archive: [['name','Sort: Name'],['statusdate','Sort: Sold/Deceased Date']]
+  }[view.tab];
+  if(!view.sort || !sortOptions.some(o=>o[0]===view.sort)) view.sort = sortOptions[0][0];
+  $('sortSelect').innerHTML = sortOptions.map(([v,l])=>`<option value="${v}" ${v===view.sort?'selected':''}>${l}</option>`).join('');
+
+  const showFilter = view.tab === 'female';
+  $('filterSelect').classList.toggle('show', showFilter);
+  if(showFilter){
+    const filterOptions = [
+      ['all','All Statuses'], ['Bred','Bred / Pending'], ['Confirmed Pregnant','Confirmed Pregnant'],
+      ['Open','Open'], ['Lost','Lost'], ['Calved','Calved'], ['none','No Records']
+    ];
+    if(!view.filter) view.filter = 'all';
+    $('filterSelect').innerHTML = filterOptions.map(([v,l])=>`<option value="${v}" ${v===view.filter?'selected':''}>${l}</option>`).join('');
+  }
 }
 
 function renderHome(){
   $('topHeader').style.display = 'block';
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === view.tab));
   $('fabAdd').classList.toggle('hidden', view.tab === 'archive');
+  setupControls();
 
   const animals = animalsForTab();
 
   if(!animals.length){
     const msg = view.tab === 'archive'
       ? 'No sold or deceased animals yet.'
-      : `No ${view.tab === 'male' ? 'bulls/steers' : 'cows'} yet.<br>Tap the + button to add one.`;
+      : `No ${view.tab === 'male' ? 'bulls/steers' : 'cows'} match.<br>Tap the + button to add one.`;
     $('main').innerHTML = `<div class="empty"><div class="tag">＋</div><br>${msg}</div>`;
     return;
   }
@@ -618,11 +704,12 @@ function renderHome(){
     const avatar = a.PhotoUrl
       ? `<img class="cow-photo" src="${escapeHtml(a.PhotoUrl)}" alt="">`
       : `<div class="ear-tag">${a.AnimalID}</div>`;
+    const subtitle = a.BirthDate ? `Born ${fmtDate(a.BirthDate)}` : (a.Genetics || '—');
     html += `<div class="cow-card" data-id="${a.AnimalID}">
       ${avatar}
       <div class="cow-info">
         <div class="cow-name">${escapeHtml(a.Name)}</div>
-        <div class="cow-genetics">${escapeHtml(a.Genetics||'—')}</div>
+        <div class="cow-genetics">${escapeHtml(subtitle)}</div>
         <div class="cow-status">${statusHtml}</div>
       </div>
       <div class="chev">›</div>
@@ -657,12 +744,17 @@ function renderDetail(animalId){
   if(a.WeaningDate) metaRow += `<span>Weaned ${fmtDate(a.WeaningDate)}</span>`;
   if(!isFemale && a.CastrationDate) metaRow += `<span>Castrated ${fmtDate(a.CastrationDate)}</span>`;
 
+  const dam = a.DamID ? state.animals.find(x => String(x.AnimalID) === String(a.DamID)) : null;
+  let parentageLine = '';
+  if(dam) parentageLine += `<span data-dam-link="${dam.AnimalID}" style="text-decoration:underline; cursor:pointer;">Dam: ${escapeHtml(dam.Name)}</span>`;
+  if(a.SireName) parentageLine += `<span>Sire: ${escapeHtml(a.SireName)}${a.SireBreed ? ' ('+escapeHtml(a.SireBreed)+')' : ''}</span>`;
+
   let html = `
     <div class="detail-header">
       <button class="back-btn" id="backBtn">‹</button>
       <div>
         <div class="detail-name">${escapeHtml(a.Name)} <span class="sex-badge">${isFemale?'Female':'Male'}</span> ${lifecycleStatusPill(a)}</div>
-        <div class="detail-genetics">${escapeHtml(a.Genetics||'—')} · Tag ${a.AnimalID}</div>
+        <div class="detail-genetics">${escapeHtml(a.Genetics||'—')} · Tag ${a.AnimalID}${a.BirthDate ? ' · Born '+fmtDate(a.BirthDate) : ''}</div>
       </div>
     </div>
     <div class="detail-photo-wrap">
@@ -673,6 +765,7 @@ function renderDetail(animalId){
         <button class="btn-small" id="photoBtn">${a.PhotoUrl ? 'Change Photo' : '+ Add Photo'}</button>
       </div>
     </div>
+    ${parentageLine ? `<div class="detail-meta-row">${parentageLine}</div>` : ''}
     ${a.Notes ? `<div class="hint" style="margin-top:8px;">${escapeHtml(a.Notes)}</div>` : ''}
     ${metaRow ? `<div class="detail-meta-row">${metaRow}</div>` : ''}
   `;
@@ -732,11 +825,19 @@ function renderDetail(animalId){
       <label>Date</label>
       <input type="date" id="statusDate" value="${a.StatusDate||''}">
     </div>
+    <div class="field conditional" id="statusNotesField">
+      <label>Notes</label>
+      <textarea id="statusNotes" placeholder="Optional — sale price, buyer, cause, etc.">${escapeHtml(a.StatusNotes||'')}</textarea>
+    </div>
     <button class="btn btn-secondary" id="saveStatusBtn" style="margin-top:0;">Save Status</button>
   </div>`;
 
+  html += `<button class="btn btn-danger" id="deleteAnimalBtn">Delete Animal</button>`;
+
   $('main').innerHTML = html;
-  document.getElementById('statusDateField').classList.toggle('show', a.Status==='Sold'||a.Status==='Deceased');
+  const showStatusExtras = a.Status==='Sold'||a.Status==='Deceased';
+  document.getElementById('statusDateField').classList.toggle('show', showStatusExtras);
+  document.getElementById('statusNotesField').classList.toggle('show', showStatusExtras);
 
   $('backBtn').addEventListener('click', ()=>{ view.screen='home'; view.animalId=null; render(); });
   $('editCowBtn').addEventListener('click', ()=> openCowSheet(a));
@@ -744,6 +845,8 @@ function renderDetail(animalId){
     $('photoInput').dataset.animalId = a.AnimalID;
     $('photoInput').click();
   });
+  const damLink = document.querySelector('[data-dam-link]');
+  if(damLink) damLink.addEventListener('click', ()=>{ view.animalId = damLink.dataset.damLink; render(); });
   const addBreedBtn = $('addBreedBtn');
   if(addBreedBtn) addBreedBtn.addEventListener('click', ()=> openBreedSheet(a, null));
   $('addHealthBtn').addEventListener('click', ()=> openHealthSheet(a));
@@ -757,14 +860,23 @@ function renderDetail(animalId){
 
   $('lifecycleStatus').addEventListener('change', ()=>{
     const v = $('lifecycleStatus').value;
-    $('statusDateField').classList.toggle('show', v==='Sold'||v==='Deceased');
+    const show = v==='Sold'||v==='Deceased';
+    $('statusDateField').classList.toggle('show', show);
+    $('statusNotesField').classList.toggle('show', show);
   });
 
   $('saveStatusBtn').addEventListener('click', async ()=>{
     const status = $('lifecycleStatus').value;
     const statusDate = $('statusDate').value;
+    const statusNotes = $('statusNotes').value.trim();
+    $('saveStatusBtn').disabled = true;
     $('saveStatusBtn').textContent = 'Saving...';
-    const res = await apiCall('updateAnimal', { AnimalID: a.AnimalID, Status: status, StatusDate: (status==='Active'?'':statusDate) });
+    const res = await apiCall('updateAnimal', {
+      AnimalID: a.AnimalID, Status: status,
+      StatusDate: (status==='Active'?'':statusDate),
+      StatusNotes: (status==='Active'?'':statusNotes)
+    });
+    $('saveStatusBtn').disabled = false;
     $('saveStatusBtn').textContent = 'Save Status';
     if(res && res.success){
       showToast('Status updated');
@@ -774,6 +886,22 @@ function renderDetail(animalId){
       showToast(res && res.error ? ('Error: ' + res.error) : 'Could not save — try again');
     }
   });
+
+  $('deleteAnimalBtn').addEventListener('click', async ()=>{
+    if(!confirm(`Delete ${a.Name}? This can't be undone.`)) return;
+    $('deleteAnimalBtn').disabled = true;
+    $('deleteAnimalBtn').textContent = 'Deleting...';
+    const res = await apiCall('deleteAnimal', { AnimalID: a.AnimalID });
+    if(res && res.success){
+      showToast('Deleted');
+      view.screen = 'home'; view.animalId = null;
+      await loadAll();
+    } else {
+      $('deleteAnimalBtn').disabled = false;
+      $('deleteAnimalBtn').textContent = 'Delete Animal';
+      showToast(res && res.error ? ('Error: ' + res.error) : 'Could not delete — try again');
+    }
+  });
 }
 
 /* ============ TABS ============ */
@@ -781,9 +909,13 @@ document.querySelectorAll('.tab').forEach(t=>{
   t.addEventListener('click', ()=>{
     view.tab = t.dataset.tab;
     view.screen = 'home';
+    view.sort = null;
+    view.filter = null;
     renderHome();
   });
 });
+$('sortSelect').addEventListener('change', ()=>{ view.sort = $('sortSelect').value; renderHome(); });
+$('filterSelect').addEventListener('change', ()=>{ view.filter = $('filterSelect').value; renderHome(); });
 
 /* ============ SHEETS: shared ============ */
 function openBackdrop(){ $('backdrop').classList.add('show'); }
@@ -803,10 +935,22 @@ function openCowSheet(animal){
   $('cowSex').value = animal ? (animal.Sex||'Female') : sexForNew;
   $('cowName').value = animal ? animal.Name : '';
   $('cowGenetics').value = animal ? animal.Genetics : '';
+  $('cowBirthDate').value = animal ? (animal.BirthDate||'') : '';
+  $('cowSireName').value = animal ? (animal.SireName||'') : '';
+  $('cowSireBreed').value = animal ? (animal.SireBreed||'') : '';
   $('cowWeaning').value = animal ? (animal.WeaningDate||'') : '';
   $('cowCastration').value = animal ? (animal.CastrationDate||'') : '';
   $('cowNotes').value = animal ? animal.Notes : '';
   $('castrationField').classList.toggle('show', $('cowSex').value === 'Male');
+
+  const currentDamId = animal ? animal.DamID : '';
+  const females = state.animals.filter(x => (x.Sex||'Female')==='Female' && String(x.AnimalID) !== String(animal?animal.AnimalID:''));
+  let damOptions = '<option value="">— Unknown / not in herd —</option>';
+  females.forEach(f => {
+    damOptions += `<option value="${f.AnimalID}" ${String(f.AnimalID)===String(currentDamId)?'selected':''}>${escapeHtml(f.Name)}</option>`;
+  });
+  $('cowDam').innerHTML = damOptions;
+
   openBackdrop();
   $('cowSheet').classList.add('show');
 }
@@ -820,10 +964,15 @@ $('saveCowBtn').addEventListener('click', async ()=>{
     Name:name,
     Genetics:$('cowGenetics').value.trim(),
     Notes:$('cowNotes').value.trim(),
+    BirthDate:$('cowBirthDate').value,
+    DamID:$('cowDam').value,
+    SireName:$('cowSireName').value.trim(),
+    SireBreed:$('cowSireBreed').value.trim(),
     WeaningDate:$('cowWeaning').value,
     CastrationDate:$('cowCastration').value,
     Sex:$('cowSex').value
   };
+  $('saveCowBtn').disabled = true;
   $('saveCowBtn').textContent = 'Saving...';
   let res;
   if(id){
@@ -832,6 +981,7 @@ $('saveCowBtn').addEventListener('click', async ()=>{
   } else {
     res = await apiCall('addAnimal', payload);
   }
+  $('saveCowBtn').disabled = false;
   $('saveCowBtn').textContent = 'Save';
   if(res && res.success){
     closeSheets();
@@ -879,6 +1029,7 @@ function openBreedSheet(animal, rec){
   $('resultSelect').value = rec ? (rec.Result||'Bred') : 'Bred';
   $('actualCalving').value = rec ? (rec.ActualCalvingDate||'') : '';
   $('breedNotes').value = rec ? (rec.Notes||'') : '';
+  $('deleteBreedBtn').classList.toggle('show', !!rec);
 
   $('calfRows').innerHTML = '';
   $('existingCalves').innerHTML = '';
@@ -925,6 +1076,7 @@ $('saveBreedBtn').addEventListener('click', async ()=>{
     Notes: $('breedNotes').value.trim()
   };
   const id = $('breedId').value;
+  $('saveBreedBtn').disabled = true;
   $('saveBreedBtn').textContent = 'Saving...';
   let res;
   if(id){
@@ -934,6 +1086,7 @@ $('saveBreedBtn').addEventListener('click', async ()=>{
     res = await apiCall('addBreeding', payload);
   }
   if(!res || !res.success){
+    $('saveBreedBtn').disabled = false;
     $('saveBreedBtn').textContent = 'Save Record';
     showToast(res && res.error ? ('Error: ' + res.error) : 'Could not save — try again');
     return;
@@ -954,16 +1107,38 @@ $('saveBreedBtn').addEventListener('click', async ()=>{
         DamID: animalId,
         DamGenetics: animal ? animal.Genetics : '',
         Breed: payload.Breed,
+        Sire: payload.Sire,
         calves: calves
       });
     }
   }
 
+  $('saveBreedBtn').disabled = false;
   $('saveBreedBtn').textContent = 'Save Record';
   closeSheets();
   showToast('Saved');
   await loadAll();
   view.screen='detail'; view.animalId=animalId; render();
+});
+
+$('deleteBreedBtn').addEventListener('click', async ()=>{
+  const id = $('breedId').value;
+  const animalId = $('breedAnimalId').value;
+  if(!id) return;
+  if(!confirm('Delete this breeding record? This can\'t be undone.')) return;
+  $('deleteBreedBtn').disabled = true;
+  $('deleteBreedBtn').textContent = 'Deleting...';
+  const res = await apiCall('deleteBreeding', { RecordID: id });
+  $('deleteBreedBtn').disabled = false;
+  $('deleteBreedBtn').textContent = 'Delete Record';
+  if(res && res.success){
+    closeSheets();
+    showToast('Deleted');
+    await loadAll();
+    view.screen='detail'; view.animalId=animalId; render();
+  } else {
+    showToast(res && res.error ? ('Error: ' + res.error) : 'Could not delete — try again');
+  }
 });
 
 /* ============ HEALTH SHEET ============ */
@@ -980,12 +1155,14 @@ $('saveHealthBtn').addEventListener('click', async ()=>{
   const note = $('healthNote').value.trim();
   if(!note){ showToast('Enter a note'); return; }
   const animalId = $('healthAnimalId').value;
+  $('saveHealthBtn').disabled = true;
   $('saveHealthBtn').textContent = 'Saving...';
   const res = await apiCall('addHealthLog', {
     AnimalID: animalId,
     Date: $('healthDate').value,
     Note: note
   });
+  $('saveHealthBtn').disabled = false;
   $('saveHealthBtn').textContent = 'Save';
   if(res && res.success){
     closeSheets();
@@ -1023,6 +1200,8 @@ $('photoInput').addEventListener('change', async (e)=>{
   const file = e.target.files[0];
   const animalId = $('photoInput').dataset.animalId;
   if(!file || !animalId) return;
+  const photoBtn = $('photoBtn');
+  if(photoBtn){ photoBtn.disabled = true; photoBtn.textContent = 'Uploading...'; }
   showToast('Uploading photo...');
   try{
     const base64 = await compressImage(file, 1000, 0.75);
@@ -1032,10 +1211,12 @@ $('photoInput').addEventListener('change', async (e)=>{
       await loadAll();
       view.screen = 'detail'; view.animalId = animalId; render();
     } else {
-      showToast('Could not upload — try again');
+      showToast(res && res.error ? ('Error: ' + res.error) : 'Could not upload — try again');
+      if(photoBtn){ photoBtn.disabled = false; photoBtn.textContent = 'Change Photo'; }
     }
   }catch(err){
     showToast('Could not process that image');
+    if(photoBtn){ photoBtn.disabled = false; photoBtn.textContent = 'Change Photo'; }
   }
   $('photoInput').value = '';
 });
