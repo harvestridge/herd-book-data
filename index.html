@@ -363,6 +363,7 @@
     <div class="tab active" data-tab="female">Females</div>
     <div class="tab" data-tab="male">Males</div>
     <div class="tab" data-tab="archive">Archive</div>
+    <div class="tab" data-tab="semen">Semen</div>
   </div>
   <div class="search" id="searchWrap">
     <input type="text" id="searchInput" placeholder="Search by name or ear tag...">
@@ -439,6 +440,13 @@
   <h2 id="breedSheetTitle">New Breeding Record</h2>
   <input type="hidden" id="breedId">
   <input type="hidden" id="breedAnimalId">
+  <input type="hidden" id="breedBullId">
+  <div class="field conditional" id="breedBullWrap">
+    <label>Bull (From Inventory)</label>
+    <select id="breedBullSelect"><option value="">— Not from inventory —</option></select>
+    <div class="hint">Picking a bull auto-fills Sire/Breed below and takes 1 straw off inventory when you save.</div>
+  </div>
+  <div class="hint conditional" id="breedBullLinkedHint">Linked to semen inventory when originally recorded.</div>
   <div class="row2">
     <div class="field">
       <label>Bred To (Sire)</label>
@@ -506,6 +514,41 @@
   <button class="btn btn-secondary" id="cancelHealthBtn">Cancel</button>
 </div>
 
+<!-- Add/Edit Bull Sheet -->
+<div class="sheet" id="bullSheet">
+  <div class="sheet-handle"></div>
+  <h2 id="bullSheetTitle">Add Bull</h2>
+  <input type="hidden" id="bullId">
+  <div class="detail-photo-wrap" style="margin-top:0;">
+    <img class="detail-photo" id="bullPhotoImg" src="" alt="" style="display:none; max-height:180px;">
+    <div class="detail-photo-placeholder" id="bullPhotoPlaceholder">No photo yet</div>
+    <div class="photo-btn-row">
+      <button type="button" class="btn-small" id="bullPhotoBtn">+ Add Photo</button>
+    </div>
+  </div>
+  <div class="field">
+    <label>Bull Name</label>
+    <input type="text" id="bullName" placeholder="e.g. Duke">
+  </div>
+  <div class="row2">
+    <div class="field">
+      <label>Breed</label>
+      <input type="text" id="bullBreed" placeholder="e.g. Angus">
+    </div>
+    <div class="field">
+      <label>Straws in Inventory</label>
+      <input type="number" id="bullQuantity" min="0" step="1" value="0">
+    </div>
+  </div>
+  <div class="field">
+    <label>Notes</label>
+    <textarea id="bullNotes" placeholder="Optional"></textarea>
+  </div>
+  <button class="btn btn-primary" id="saveBullBtn">Save</button>
+  <button class="btn btn-secondary" id="cancelBullBtn">Cancel</button>
+  <button class="btn btn-danger conditional" id="deleteBullBtn">Delete Bull</button>
+</div>
+
 <input type="file" id="photoInput" accept="image/*" style="display:none;">
 
 <div class="toast" id="toast"></div>
@@ -517,7 +560,7 @@ const GESTATION_DAYS = 283;
 const CACHE_KEY = 'herdbook_cache_v2';
 
 /* ============ STATE ============ */
-let state = { animals: [], breeding: [], calves: [], health: [] };
+let state = { animals: [], breeding: [], calves: [], health: [], bulls: [] };
 let view = { screen: 'home', animalId: null, tab: 'female' };
 let calfRowCount = 0;
 
@@ -660,11 +703,31 @@ function animalsForTab(){
   return list;
 }
 
+function bullsForTab(){
+  const q = ($('searchInput') && $('searchInput').value || '').toLowerCase();
+  let list = state.bulls.filter(b => !q || (b.Name||'').toLowerCase().includes(q));
+  const sortKey = view.sort || 'name';
+  if(sortKey === 'quantity'){
+    list = list.sort((a,b) => (Number(a.Quantity)||0) - (Number(b.Quantity)||0));
+  } else {
+    list = list.sort((a,b) => (a.Name||'').localeCompare(b.Name||''));
+  }
+  return list;
+}
+
+function quantityPillHtml(qty){
+  const n = Number(qty) || 0;
+  if(n <= 0) return `<span class="pill lost">Out of Stock</span>`;
+  if(n <= 3) return `<span class="pill due">Low: ${n} left</span>`;
+  return `<span class="pill pregnant">${n} in stock</span>`;
+}
+
 function setupControls(){
   const sortOptions = {
     female: [['name','Sort: Name'],['birthdate','Sort: Birth Date'],['duedate','Sort: Due Date']],
     male: [['name','Sort: Name'],['birthdate','Sort: Birth Date']],
-    archive: [['name','Sort: Name'],['statusdate','Sort: Sold/Deceased Date']]
+    archive: [['name','Sort: Name'],['statusdate','Sort: Sold/Deceased Date']],
+    semen: [['name','Sort: Name'],['quantity','Sort: Quantity (Low First)']]
   }[view.tab];
   if(!view.sort || !sortOptions.some(o=>o[0]===view.sort)) view.sort = sortOptions[0][0];
   $('sortSelect').innerHTML = sortOptions.map(([v,l])=>`<option value="${v}" ${v===view.sort?'selected':''}>${l}</option>`).join('');
@@ -686,6 +749,8 @@ function renderHome(){
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === view.tab));
   $('fabAdd').classList.toggle('hidden', view.tab === 'archive');
   setupControls();
+
+  if(view.tab === 'semen'){ renderSemenHome(); return; }
 
   const animals = animalsForTab();
 
@@ -722,6 +787,38 @@ function renderHome(){
     el.addEventListener('click', ()=>{
       view.screen = 'detail'; view.animalId = el.dataset.id;
       render();
+    });
+  });
+}
+
+function renderSemenHome(){
+  const bulls = bullsForTab();
+  if(!bulls.length){
+    $('main').innerHTML = `<div class="empty"><div class="tag">＋</div><br>No bulls in inventory yet.<br>Tap the + button to add one.</div>`;
+    return;
+  }
+  let html = '<div class="cow-list">';
+  bulls.forEach(b => {
+    const avatar = b.PhotoUrl
+      ? `<img class="cow-photo" src="${escapeHtml(b.PhotoUrl)}" alt="">`
+      : `<div class="ear-tag">${escapeHtml((b.Name||'?').slice(0,3).toUpperCase())}</div>`;
+    html += `<div class="cow-card" data-id="${b.BullID}">
+      ${avatar}
+      <div class="cow-info">
+        <div class="cow-name">${escapeHtml(b.Name)}</div>
+        <div class="cow-genetics">${escapeHtml(b.Breed||'—')}</div>
+        <div class="cow-status">${quantityPillHtml(b.Quantity)}</div>
+      </div>
+      <div class="chev">›</div>
+    </div>`;
+  });
+  html += '</div>';
+  $('main').innerHTML = html;
+
+  document.querySelectorAll('.cow-card').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const bull = state.bulls.find(x => String(x.BullID) === el.dataset.id);
+      if(bull) openBullSheet(bull);
     });
   });
 }
@@ -843,6 +940,7 @@ function renderDetail(animalId){
   $('editCowBtn').addEventListener('click', ()=> openCowSheet(a));
   $('photoBtn').addEventListener('click', ()=>{
     $('photoInput').dataset.animalId = a.AnimalID;
+    $('photoInput').dataset.type = 'animal';
     $('photoInput').click();
   });
   const damLink = document.querySelector('[data-dam-link]');
@@ -924,6 +1022,7 @@ function closeSheets(){
   $('cowSheet').classList.remove('show');
   $('breedSheet').classList.remove('show');
   $('healthSheet').classList.remove('show');
+  $('bullSheet').classList.remove('show');
 }
 $('backdrop').addEventListener('click', closeSheets);
 
@@ -1022,6 +1121,7 @@ function openBreedSheet(animal, rec){
   $('breedSheetTitle').textContent = rec ? 'Edit Breeding Record' : `New Record — ${animal.Name}`;
   $('breedId').value = rec ? rec.RecordID : '';
   $('breedAnimalId').value = animal.AnimalID;
+  $('breedBullId').value = '';
   $('sireInput').value = rec ? rec.Sire : '';
   $('breedInput').value = rec ? (rec.Breed||'') : '';
   $('dateBred').value = rec ? rec.DateBred : new Date().toISOString().slice(0,10);
@@ -1030,6 +1130,21 @@ function openBreedSheet(animal, rec){
   $('actualCalving').value = rec ? (rec.ActualCalvingDate||'') : '';
   $('breedNotes').value = rec ? (rec.Notes||'') : '';
   $('deleteBreedBtn').classList.toggle('show', !!rec);
+
+  // Bull-from-inventory picker only makes sense for a brand new record.
+  if(!rec){
+    $('breedBullWrap').classList.add('show');
+    $('breedBullLinkedHint').classList.remove('show');
+    let opts = '<option value="">— Not from inventory —</option>';
+    state.bulls.filter(b => (Number(b.Quantity)||0) > 0).forEach(b => {
+      opts += `<option value="${b.BullID}">${escapeHtml(b.Name)} — ${escapeHtml(b.Breed||'')} (${b.Quantity} left)</option>`;
+    });
+    $('breedBullSelect').innerHTML = opts;
+    $('breedBullSelect').value = '';
+  } else {
+    $('breedBullWrap').classList.remove('show');
+    $('breedBullLinkedHint').classList.toggle('show', !!rec.BullID);
+  }
 
   $('calfRows').innerHTML = '';
   $('existingCalves').innerHTML = '';
@@ -1044,6 +1159,18 @@ function openBreedSheet(animal, rec){
   $('breedSheet').classList.add('show');
 }
 $('cancelBreedBtn').addEventListener('click', closeSheets);
+
+$('breedBullSelect').addEventListener('change', ()=>{
+  const bullId = $('breedBullSelect').value;
+  $('breedBullId').value = bullId;
+  if(bullId){
+    const bull = state.bulls.find(b => String(b.BullID) === String(bullId));
+    if(bull){
+      $('sireInput').value = bull.Name;
+      $('breedInput').value = bull.Breed || '';
+    }
+  }
+});
 
 $('dateBred').addEventListener('change', ()=>{
   if($('dateBred').value){
@@ -1064,6 +1191,7 @@ $('saveBreedBtn').addEventListener('click', async ()=>{
   const animalId = $('breedAnimalId').value;
   const animal = state.animals.find(a => String(a.AnimalID) === String(animalId));
   if(!$('dateBred').value){ showToast('Enter date bred'); return; }
+  const id = $('breedId').value;
   const payload = {
     AnimalID: animalId,
     AnimalName: animal ? animal.Name : '',
@@ -1075,7 +1203,9 @@ $('saveBreedBtn').addEventListener('click', async ()=>{
     ActualCalvingDate: $('actualCalving').value,
     Notes: $('breedNotes').value.trim()
   };
-  const id = $('breedId').value;
+  if(!id && $('breedBullId').value){
+    payload.BullID = $('breedBullId').value;
+  }
   $('saveBreedBtn').disabled = true;
   $('saveBreedBtn').textContent = 'Saving...';
   let res;
@@ -1174,6 +1304,89 @@ $('saveHealthBtn').addEventListener('click', async ()=>{
   }
 });
 
+/* ============ BULL SHEET (SEMEN INVENTORY) ============ */
+function openBullSheet(bull){
+  $('bullSheetTitle').textContent = bull ? 'Edit Bull' : 'Add Bull';
+  $('bullId').value = bull ? bull.BullID : '';
+  $('bullName').value = bull ? bull.Name : '';
+  $('bullBreed').value = bull ? (bull.Breed||'') : '';
+  $('bullQuantity').value = bull ? (bull.Quantity||0) : 0;
+  $('bullNotes').value = bull ? (bull.Notes||'') : '';
+  $('deleteBullBtn').classList.toggle('show', !!bull);
+
+  if(bull && bull.PhotoUrl){
+    $('bullPhotoImg').src = bull.PhotoUrl;
+    $('bullPhotoImg').style.display = 'block';
+    $('bullPhotoPlaceholder').style.display = 'none';
+    $('bullPhotoBtn').textContent = 'Change Photo';
+  } else {
+    $('bullPhotoImg').style.display = 'none';
+    $('bullPhotoPlaceholder').style.display = 'flex';
+    $('bullPhotoBtn').textContent = '+ Add Photo';
+  }
+
+  openBackdrop();
+  $('bullSheet').classList.add('show');
+}
+$('cancelBullBtn').addEventListener('click', closeSheets);
+
+$('bullPhotoBtn').addEventListener('click', ()=>{
+  if(!$('bullId').value){ showToast('Save the bull first, then add a photo'); return; }
+  $('photoInput').dataset.type = 'bull';
+  $('photoInput').dataset.bullId = $('bullId').value;
+  $('photoInput').click();
+});
+
+$('saveBullBtn').addEventListener('click', async ()=>{
+  const name = $('bullName').value.trim();
+  if(!name){ showToast('Enter a bull name'); return; }
+  const id = $('bullId').value;
+  const payload = {
+    Name: name,
+    Breed: $('bullBreed').value.trim(),
+    Quantity: Number($('bullQuantity').value) || 0,
+    Notes: $('bullNotes').value.trim()
+  };
+  $('saveBullBtn').disabled = true;
+  $('saveBullBtn').textContent = 'Saving...';
+  let res;
+  if(id){
+    payload.BullID = id;
+    res = await apiCall('updateBull', payload);
+  } else {
+    res = await apiCall('addBull', payload);
+  }
+  $('saveBullBtn').disabled = false;
+  $('saveBullBtn').textContent = 'Save';
+  if(res && res.success){
+    closeSheets();
+    showToast('Saved');
+    await loadAll();
+    renderHome();
+  } else {
+    showToast(res && res.error ? ('Error: ' + res.error) : 'Could not save — try again');
+  }
+});
+
+$('deleteBullBtn').addEventListener('click', async ()=>{
+  const id = $('bullId').value;
+  if(!id) return;
+  if(!confirm('Delete this bull from inventory? This can\'t be undone.')) return;
+  $('deleteBullBtn').disabled = true;
+  $('deleteBullBtn').textContent = 'Deleting...';
+  const res = await apiCall('deleteBull', { BullID: id });
+  $('deleteBullBtn').disabled = false;
+  $('deleteBullBtn').textContent = 'Delete Bull';
+  if(res && res.success){
+    closeSheets();
+    showToast('Deleted');
+    await loadAll();
+    renderHome();
+  } else {
+    showToast(res && res.error ? ('Error: ' + res.error) : 'Could not delete — try again');
+  }
+});
+
 /* ============ PHOTOS ============ */
 function compressImage(file, maxDim, quality){
   return new Promise((resolve, reject)=>{
@@ -1198,32 +1411,51 @@ function compressImage(file, maxDim, quality){
 
 $('photoInput').addEventListener('change', async (e)=>{
   const file = e.target.files[0];
-  const animalId = $('photoInput').dataset.animalId;
-  if(!file || !animalId) return;
-  const photoBtn = $('photoBtn');
-  if(photoBtn){ photoBtn.disabled = true; photoBtn.textContent = 'Uploading...'; }
+  const type = $('photoInput').dataset.type || 'animal';
+  const targetId = type === 'bull' ? $('photoInput').dataset.bullId : $('photoInput').dataset.animalId;
+  if(!file || !targetId) return;
+
+  const btn = type === 'bull' ? $('bullPhotoBtn') : $('photoBtn');
+  if(btn){ btn.disabled = true; btn.textContent = 'Uploading...'; }
   showToast('Uploading photo...');
+
   try{
     const base64 = await compressImage(file, 1000, 0.75);
-    const res = await apiCall('uploadPhoto', { AnimalID: animalId, ImageData: base64, MimeType: 'image/jpeg' });
+    const payload = { Type: type, ImageData: base64, MimeType: 'image/jpeg' };
+    if(type === 'bull') payload.BullID = targetId; else payload.AnimalID = targetId;
+    const res = await apiCall('uploadPhoto', payload);
+
     if(res && res.success){
       showToast('Photo saved');
       await loadAll();
-      view.screen = 'detail'; view.animalId = animalId; render();
+      if(type === 'bull'){
+        const bull = state.bulls.find(b => String(b.BullID) === String(targetId));
+        if(bull && bull.PhotoUrl){
+          $('bullPhotoImg').src = bull.PhotoUrl;
+          $('bullPhotoImg').style.display = 'block';
+          $('bullPhotoPlaceholder').style.display = 'none';
+        }
+        if(btn){ btn.disabled = false; btn.textContent = 'Change Photo'; }
+        if(view.tab === 'semen') renderSemenHome();
+      } else {
+        view.screen = 'detail'; view.animalId = targetId; render();
+      }
     } else {
       showToast(res && res.error ? ('Error: ' + res.error) : 'Could not upload — try again');
-      if(photoBtn){ photoBtn.disabled = false; photoBtn.textContent = 'Change Photo'; }
+      if(btn){ btn.disabled = false; btn.textContent = type==='bull' ? 'Add Photo' : 'Change Photo'; }
     }
   }catch(err){
     showToast('Could not process that image');
-    if(photoBtn){ photoBtn.disabled = false; photoBtn.textContent = 'Change Photo'; }
+    if(btn){ btn.disabled = false; btn.textContent = type==='bull' ? 'Add Photo' : 'Change Photo'; }
   }
   $('photoInput').value = '';
 });
 
 /* ============ FAB ============ */
 $('fabAdd').addEventListener('click', ()=>{
-  if(view.screen === 'home') openCowSheet(null);
+  if(view.screen !== 'home') return;
+  if(view.tab === 'semen') openBullSheet(null);
+  else openCowSheet(null);
 });
 
 /* ============ SEARCH ============ */
