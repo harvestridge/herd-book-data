@@ -546,15 +546,15 @@
   <div class="row3">
     <div class="field">
       <label>Birth Weight</label>
-      <input type="number" id="bullBirthWeight" step="0.1" placeholder="e.g. -1.7">
+      <input type="text" inputmode="text" id="bullBirthWeight" placeholder="e.g. -1.7">
     </div>
     <div class="field">
       <label>CED</label>
-      <input type="number" id="bullCED" step="0.1" placeholder="e.g. 24.5">
+      <input type="text" inputmode="text" id="bullCED" placeholder="e.g. 24.5">
     </div>
     <div class="field">
       <label>Milk</label>
-      <input type="number" id="bullMilk" step="0.1" placeholder="e.g. 30">
+      <input type="text" inputmode="text" id="bullMilk" placeholder="e.g. 30">
     </div>
   </div>
   <div class="field">
@@ -1368,17 +1368,32 @@ $('bullPhotoBtn').addEventListener('click', ()=>{
   $('photoInput').click();
 });
 
+function parseSignedNumber(str){
+  const trimmed = (str||'').trim();
+  if(trimmed === '') return { ok:true, value:'' };
+  if(!/^[+-]?\d*\.?\d+$/.test(trimmed)) return { ok:false, value:null };
+  return { ok:true, value:Number(trimmed) };
+}
+
 $('saveBullBtn').addEventListener('click', async ()=>{
   const name = $('bullName').value.trim();
   if(!name){ showToast('Enter a bull name'); return; }
+
+  const bw = parseSignedNumber($('bullBirthWeight').value);
+  const ced = parseSignedNumber($('bullCED').value);
+  const milk = parseSignedNumber($('bullMilk').value);
+  if(!bw.ok){ showToast('Birth Weight: enter a number like -1.7 or 24.5'); return; }
+  if(!ced.ok){ showToast('CED: enter a number like -1.7 or 24.5'); return; }
+  if(!milk.ok){ showToast('Milk: enter a number like -1.7 or 24.5'); return; }
+
   const id = $('bullId').value;
   const payload = {
     Name: name,
     Breed: $('bullBreed').value.trim(),
     Quantity: Number($('bullQuantity').value) || 0,
-    BirthWeight: $('bullBirthWeight').value === '' ? '' : Number($('bullBirthWeight').value),
-    CED: $('bullCED').value === '' ? '' : Number($('bullCED').value),
-    Milk: $('bullMilk').value === '' ? '' : Number($('bullMilk').value),
+    BirthWeight: bw.value,
+    CED: ced.value,
+    Milk: milk.value,
     Notes: $('bullNotes').value.trim()
   };
   $('saveBullBtn').disabled = true;
