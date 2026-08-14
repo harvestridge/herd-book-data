@@ -238,6 +238,9 @@
   .field textarea{resize:vertical; min-height:60px;}
   .row2{display:flex; gap:10px;}
   .row2 .field{flex:1;}
+  .row3{display:flex; gap:8px;}
+  .row3 .field{flex:1;}
+  .row2 .field{flex:1;}
   .btn{
     width:100%;
     padding:14px;
@@ -540,6 +543,20 @@
       <input type="number" id="bullQuantity" min="0" step="1" value="0">
     </div>
   </div>
+  <div class="row3">
+    <div class="field">
+      <label>Birth Weight</label>
+      <input type="number" id="bullBirthWeight" step="0.1" placeholder="e.g. -1.7">
+    </div>
+    <div class="field">
+      <label>CED</label>
+      <input type="number" id="bullCED" step="0.1" placeholder="e.g. 24.5">
+    </div>
+    <div class="field">
+      <label>Milk</label>
+      <input type="number" id="bullMilk" step="0.1" placeholder="e.g. 30">
+    </div>
+  </div>
   <div class="field">
     <label>Notes</label>
     <textarea id="bullNotes" placeholder="Optional"></textarea>
@@ -555,7 +572,7 @@
 
 <script>
 /* ============ CONFIG ============ */
-const API_URL = 'https://script.google.com/macros/s/AKfycbwgI0uNhVs6V_GW5Rjv0pN1DxroLPkm9xDOB2QHQs9EjZLBplu2bjLHfcHPwUYuHqE7vg/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbxgp_i-DnQhbRkuYvNZKtmEUJ-gAlOQeXM7rxwiYQL55lzmDWJucZKZvRlixOGASi0Ydw/exec';
 const GESTATION_DAYS = 283;
 const CACHE_KEY = 'herdbook_cache_v2';
 
@@ -709,6 +726,12 @@ function bullsForTab(){
   const sortKey = view.sort || 'name';
   if(sortKey === 'quantity'){
     list = list.sort((a,b) => (Number(a.Quantity)||0) - (Number(b.Quantity)||0));
+  } else if(sortKey === 'birthweight'){
+    list = list.sort((a,b) => (Number(a.BirthWeight)||0) - (Number(b.BirthWeight)||0));
+  } else if(sortKey === 'ced'){
+    list = list.sort((a,b) => (Number(b.CED)||0) - (Number(a.CED)||0));
+  } else if(sortKey === 'milk'){
+    list = list.sort((a,b) => (Number(b.Milk)||0) - (Number(a.Milk)||0));
   } else {
     list = list.sort((a,b) => (a.Name||'').localeCompare(b.Name||''));
   }
@@ -727,7 +750,7 @@ function setupControls(){
     female: [['name','Sort: Name'],['birthdate','Sort: Birth Date'],['duedate','Sort: Due Date']],
     male: [['name','Sort: Name'],['birthdate','Sort: Birth Date']],
     archive: [['name','Sort: Name'],['statusdate','Sort: Sold/Deceased Date']],
-    semen: [['name','Sort: Name'],['quantity','Sort: Quantity (Low First)']]
+    semen: [['name','Sort: Name'],['quantity','Sort: Quantity (Low First)'],['birthweight','Sort: Birth Weight'],['ced','Sort: CED'],['milk','Sort: Milk']]
   }[view.tab];
   if(!view.sort || !sortOptions.some(o=>o[0]===view.sort)) view.sort = sortOptions[0][0];
   $('sortSelect').innerHTML = sortOptions.map(([v,l])=>`<option value="${v}" ${v===view.sort?'selected':''}>${l}</option>`).join('');
@@ -802,11 +825,16 @@ function renderSemenHome(){
     const avatar = b.PhotoUrl
       ? `<img class="cow-photo" src="${escapeHtml(b.PhotoUrl)}" alt="">`
       : `<div class="ear-tag">${escapeHtml((b.Name||'?').slice(0,3).toUpperCase())}</div>`;
+    const epdParts = [];
+    if(b.BirthWeight !== undefined && b.BirthWeight !== '') epdParts.push(`BW ${b.BirthWeight}`);
+    if(b.CED !== undefined && b.CED !== '') epdParts.push(`CED ${b.CED}`);
+    if(b.Milk !== undefined && b.Milk !== '') epdParts.push(`Milk ${b.Milk}`);
+    const subtitle = epdParts.length ? `${b.Breed||'—'} · ${epdParts.join(' · ')}` : (b.Breed||'—');
     html += `<div class="cow-card" data-id="${b.BullID}">
       ${avatar}
       <div class="cow-info">
         <div class="cow-name">${escapeHtml(b.Name)}</div>
-        <div class="cow-genetics">${escapeHtml(b.Breed||'—')}</div>
+        <div class="cow-genetics">${escapeHtml(subtitle)}</div>
         <div class="cow-status">${quantityPillHtml(b.Quantity)}</div>
       </div>
       <div class="chev">›</div>
@@ -1311,6 +1339,9 @@ function openBullSheet(bull){
   $('bullName').value = bull ? bull.Name : '';
   $('bullBreed').value = bull ? (bull.Breed||'') : '';
   $('bullQuantity').value = bull ? (bull.Quantity||0) : 0;
+  $('bullBirthWeight').value = bull ? (bull.BirthWeight!==undefined?bull.BirthWeight:'') : '';
+  $('bullCED').value = bull ? (bull.CED!==undefined?bull.CED:'') : '';
+  $('bullMilk').value = bull ? (bull.Milk!==undefined?bull.Milk:'') : '';
   $('bullNotes').value = bull ? (bull.Notes||'') : '';
   $('deleteBullBtn').classList.toggle('show', !!bull);
 
@@ -1345,6 +1376,9 @@ $('saveBullBtn').addEventListener('click', async ()=>{
     Name: name,
     Breed: $('bullBreed').value.trim(),
     Quantity: Number($('bullQuantity').value) || 0,
+    BirthWeight: $('bullBirthWeight').value === '' ? '' : Number($('bullBirthWeight').value),
+    CED: $('bullCED').value === '' ? '' : Number($('bullCED').value),
+    Milk: $('bullMilk').value === '' ? '' : Number($('bullMilk').value),
     Notes: $('bullNotes').value.trim()
   };
   $('saveBullBtn').disabled = true;
