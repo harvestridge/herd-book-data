@@ -52,16 +52,21 @@
   .tabs{
     display:flex;
     gap:4px;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
   }
+  .tabs::-webkit-scrollbar{ display:none; }
   .tab{
-    flex:1;
+    flex:none;
     text-align:center;
-    padding:10px 6px;
+    padding:10px 12px;
     font-size:13.5px;
     font-weight:600;
     color:var(--ink-soft);
     border-bottom:2.5px solid transparent;
     cursor:pointer;
+    white-space:nowrap;
   }
   .tab.active{ color:var(--ink); border-bottom-color:var(--rust); }
   .search{
@@ -329,6 +334,91 @@
     padding:14px;
     margin-top:22px;
   }
+  .stat-row{
+    display:flex; gap:10px;
+    margin-bottom:20px;
+  }
+  .stat-card{
+    flex:1;
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:14px 10px;
+    text-align:center;
+  }
+  .stat-num{
+    font-family:'Bitter',serif;
+    font-weight:700;
+    font-size:26px;
+    color:var(--ink);
+  }
+  .stat-label{
+    font-size:11.5px;
+    color:var(--ink-soft);
+    font-weight:600;
+    text-transform:uppercase;
+    letter-spacing:.03em;
+    margin-top:2px;
+  }
+  .chart-card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:16px 16px 6px;
+    margin-bottom:20px;
+  }
+  .chart-row{
+    display:flex; align-items:center; gap:10px;
+    margin-bottom:10px;
+  }
+  .chart-label{
+    width:110px; flex:none;
+    font-size:12.5px; color:var(--ink-soft); font-weight:600;
+  }
+  .chart-bar-wrap{
+    flex:1; background:var(--gray-soft); border-radius:6px; height:18px; position:relative; overflow:hidden;
+  }
+  .chart-bar{
+    height:100%; border-radius:6px;
+    background:var(--slate);
+  }
+  .chart-num{
+    width:26px; flex:none; text-align:right;
+    font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--ink-soft);
+  }
+  .alert-section{ margin-bottom:22px; }
+  .alert-card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-left:4px solid var(--rust);
+    border-radius:10px;
+    padding:11px 14px;
+    margin-bottom:8px;
+    cursor:pointer;
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  .alert-card.calm{ border-left-color:var(--slate); }
+  .alert-name{ font-weight:600; font-size:14.5px; }
+  .alert-detail{ font-size:12px; color:var(--ink-soft); margin-top:2px; }
+  .totals-row{
+    display:flex; gap:8px; flex-wrap:wrap;
+    margin-bottom:16px;
+  }
+  .totals-chip{
+    background:var(--card); border:1px solid var(--line); border-radius:10px;
+    padding:8px 12px; font-size:12.5px; color:var(--ink-soft); font-weight:600;
+  }
+  .totals-chip-num{
+    font-family:'Bitter',serif; font-weight:700; font-size:15px; color:var(--ink);
+    margin-right:5px;
+  }
+  .location-card{
+    background:var(--card); border:1px solid var(--line); border-radius:14px;
+    padding:14px; margin-bottom:10px; cursor:pointer;
+  }
+  .location-card-top{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+  .location-name{ font-weight:600; font-size:15.5px; }
+  .location-count{ font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--ink-soft); }
   .calf-row{
     display:flex; gap:8px; align-items:flex-end; margin-bottom:10px;
     padding-bottom:10px; border-bottom:1px solid var(--line);
@@ -363,10 +453,12 @@
   <h1>Herd Book</h1>
   <div class="sub">Breeding &amp; calving records</div>
   <div class="tabs" id="tabs">
-    <div class="tab active" data-tab="female">Females</div>
+    <div class="tab active" data-tab="dashboard">Dashboard</div>
+    <div class="tab" data-tab="female">Females</div>
     <div class="tab" data-tab="male">Males</div>
     <div class="tab" data-tab="archive">Archive</div>
     <div class="tab" data-tab="semen">Semen</div>
+    <div class="tab" data-tab="locations">Locations</div>
   </div>
   <div class="search" id="searchWrap">
     <input type="text" id="searchInput" placeholder="Search by name or ear tag...">
@@ -428,6 +520,12 @@
       <label>Castration Date</label>
       <input type="date" id="cowCastration">
     </div>
+  </div>
+  <div class="field">
+    <label>Location</label>
+    <select id="cowLocation">
+      <option value="">— Not set —</option>
+    </select>
   </div>
   <div class="field">
     <label>Notes</label>
@@ -572,13 +670,14 @@
 
 <script>
 /* ============ CONFIG ============ */
-const API_URL = 'https://script.google.com/macros/s/AKfycbxgp_i-DnQhbRkuYvNZKtmEUJ-gAlOQeXM7rxwiYQL55lzmDWJucZKZvRlixOGASi0Ydw/exec';
+const API_URL = 'https://script.google.com/macros/library/d/1-dI8nyeRxGuysgtR912pNezAeoUrsyzgPxsPNA23IHAIG3vSvdnWqsH8/7';
 const GESTATION_DAYS = 283;
+const LOCATIONS = ['Dry Cow Lot', 'Front Pasture', 'The 90', 'Heifer Barn', 'Down Home'];
 const CACHE_KEY = 'herdbook_cache_v2';
 
 /* ============ STATE ============ */
 let state = { animals: [], breeding: [], calves: [], health: [], bulls: [] };
-let view = { screen: 'home', animalId: null, tab: 'female' };
+let view = { screen: 'home', animalId: null, tab: 'dashboard', locationFilter: null };
 let calfRowCount = 0;
 
 /* ============ HELPERS ============ */
@@ -746,6 +845,14 @@ function quantityPillHtml(qty){
 }
 
 function setupControls(){
+  if(view.tab === 'dashboard' || view.tab === 'locations'){
+    $('searchWrap').style.display = 'none';
+    $('controlsWrap').style.display = 'none';
+    return;
+  }
+  $('searchWrap').style.display = 'flex';
+  $('controlsWrap').style.display = 'flex';
+
   const sortOptions = {
     female: [['name','Sort: Name'],['birthdate','Sort: Birth Date'],['duedate','Sort: Due Date']],
     male: [['name','Sort: Name'],['birthdate','Sort: Birth Date']],
@@ -770,9 +877,11 @@ function setupControls(){
 function renderHome(){
   $('topHeader').style.display = 'block';
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === view.tab));
-  $('fabAdd').classList.toggle('hidden', view.tab === 'archive');
+  $('fabAdd').classList.toggle('hidden', view.tab === 'archive' || view.tab === 'dashboard' || view.tab === 'locations');
   setupControls();
 
+  if(view.tab === 'dashboard'){ renderDashboard(); return; }
+  if(view.tab === 'locations'){ renderLocationsHome(); return; }
   if(view.tab === 'semen'){ renderSemenHome(); return; }
 
   const animals = animalsForTab();
@@ -816,11 +925,23 @@ function renderHome(){
 
 function renderSemenHome(){
   const bulls = bullsForTab();
+
+  const breedTotals = {};
+  state.bulls.forEach(b => {
+    const key = b.Breed && b.Breed.trim() ? b.Breed.trim() : 'Unspecified';
+    breedTotals[key] = (breedTotals[key]||0) + (Number(b.Quantity)||0);
+  });
+  const breedKeys = Object.keys(breedTotals).sort();
+  let totalsHtml = '';
+  if(breedKeys.length){
+    totalsHtml = `<div class="totals-row">${breedKeys.map(k=>`<div class="totals-chip"><span class="totals-chip-num">${breedTotals[k]}</span>${escapeHtml(k)}</div>`).join('')}</div>`;
+  }
+
   if(!bulls.length){
-    $('main').innerHTML = `<div class="empty"><div class="tag">＋</div><br>No bulls in inventory yet.<br>Tap the + button to add one.</div>`;
+    $('main').innerHTML = `${totalsHtml}<div class="empty"><div class="tag">＋</div><br>No bulls in inventory yet.<br>Tap the + button to add one.</div>`;
     return;
   }
-  let html = '<div class="cow-list">';
+  let html = totalsHtml + '<div class="cow-list">';
   bulls.forEach(b => {
     const avatar = b.PhotoUrl
       ? `<img class="cow-photo" src="${escapeHtml(b.PhotoUrl)}" alt="">`
@@ -851,6 +972,192 @@ function renderSemenHome(){
   });
 }
 
+/* ============ DASHBOARD ============ */
+function renderDashboard(){
+  const activeFemales = state.animals.filter(a => (a.Sex||'Female')==='Female' && (a.Status||'Active')==='Active');
+  const activeMales = state.animals.filter(a => a.Sex==='Male' && (a.Status||'Active')==='Active');
+  const totalActive = activeFemales.length + activeMales.length;
+
+  const statusCounts = { 'Bred':0, 'Confirmed Pregnant':0, 'Open':0, 'Lost':0, 'Calved':0, 'No Records':0 };
+  const pregCheckDue = [];
+  const dueSoon = [];
+  const overdue = [];
+
+  activeFemales.forEach(a => {
+    const rec = latestBreedingFor(a.AnimalID);
+    if(!rec){ statusCounts['No Records']++; return; }
+    statusCounts[rec.Result] = (statusCounts[rec.Result]||0) + 1;
+
+    if(rec.Result === 'Bred' && rec.DateBred){
+      const since = -daysUntil(rec.DateBred);
+      if(since >= 45 && since <= 60){
+        pregCheckDue.push({ animal:a, detail:`Bred ${since} days ago` });
+      }
+    }
+    if((rec.Result === 'Bred' || rec.Result === 'Confirmed Pregnant') && rec.EstCalvingDate){
+      const d = daysUntil(rec.EstCalvingDate);
+      if(d >= 0 && d <= 10){
+        dueSoon.push({ animal:a, detail: d===0 ? 'Due today' : `Due in ${d} day${d===1?'':'s'}` });
+      } else if(d < 0){
+        overdue.push({ animal:a, detail:`${Math.abs(d)} day${Math.abs(d)===1?'':'s'} overdue` });
+      }
+    }
+  });
+
+  const maxCount = Math.max(1, ...Object.values(statusCounts));
+  const chartColors = { 'Bred':'var(--slate)', 'Confirmed Pregnant':'var(--green)', 'Open':'var(--ink-soft)', 'Lost':'var(--rust)', 'Calved':'var(--green)', 'No Records':'var(--line)' };
+
+  let html = `<div class="stat-row">
+    <div class="stat-card"><div class="stat-num">${activeFemales.length}</div><div class="stat-label">Females</div></div>
+    <div class="stat-card"><div class="stat-num">${activeMales.length}</div><div class="stat-label">Males</div></div>
+    <div class="stat-card"><div class="stat-num">${totalActive}</div><div class="stat-label">In Herd</div></div>
+  </div>`;
+
+  const alertSections = [
+    { title:'Ready for Preg Check (45–60 days)', items:pregCheckDue, calm:false },
+    { title:'Due Soon (within 10 days)', items:dueSoon, calm:false },
+    { title:'Overdue', items:overdue, calm:false }
+  ];
+  alertSections.forEach(sec => {
+    if(!sec.items.length) return;
+    html += `<div class="alert-section">
+      <div class="section-label" style="margin-top:0;">${sec.title}</div>`;
+    sec.items.forEach(item => {
+      html += `<div class="alert-card" data-id="${item.animal.AnimalID}">
+        <div>
+          <div class="alert-name">${escapeHtml(item.animal.Name)}</div>
+          <div class="alert-detail">${escapeHtml(item.detail)}</div>
+        </div>
+        <div class="chev">›</div>
+      </div>`;
+    });
+    html += `</div>`;
+  });
+  if(!pregCheckDue.length && !dueSoon.length && !overdue.length){
+    html += `<div class="hint" style="margin-bottom:20px;">Nothing needs attention right now.</div>`;
+  }
+
+  html += `<div class="section-label" style="margin-top:0;">Breeding Status (Females)</div>
+    <div class="chart-card">`;
+  Object.keys(statusCounts).forEach(k => {
+    const n = statusCounts[k];
+    const pct = Math.round((n / maxCount) * 100);
+    html += `<div class="chart-row">
+      <div class="chart-label">${escapeHtml(k)}</div>
+      <div class="chart-bar-wrap"><div class="chart-bar" style="width:${pct}%; background:${chartColors[k]};"></div></div>
+      <div class="chart-num">${n}</div>
+    </div>`;
+  });
+  html += `</div>`;
+
+  $('main').innerHTML = html;
+  document.querySelectorAll('.alert-card').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      view.tab = 'female'; view.screen = 'detail'; view.animalId = el.dataset.id;
+      render();
+    });
+  });
+}
+
+/* ============ LOCATIONS ============ */
+function renderLocationsHome(){
+  if(view.locationFilter){ renderLocationDetail(view.locationFilter); return; }
+
+  const active = state.animals.filter(a => (a.Status||'Active')==='Active');
+  const counts = {};
+  LOCATIONS.forEach(loc => counts[loc] = 0);
+  let unset = 0;
+  active.forEach(a => {
+    if(a.Location && LOCATIONS.indexOf(a.Location) !== -1) counts[a.Location]++;
+    else unset++;
+  });
+  const maxCount = Math.max(1, ...Object.values(counts));
+
+  let html = `<div class="chart-card">`;
+  LOCATIONS.forEach(loc => {
+    const n = counts[loc];
+    const pct = Math.round((n / maxCount) * 100);
+    html += `<div class="chart-row">
+      <div class="chart-label">${escapeHtml(loc)}</div>
+      <div class="chart-bar-wrap"><div class="chart-bar" style="width:${pct}%;"></div></div>
+      <div class="chart-num">${n}</div>
+    </div>`;
+  });
+  html += `</div>`;
+
+  html += `<div class="cow-list">`;
+  LOCATIONS.forEach(loc => {
+    html += `<div class="location-card" data-loc="${escapeHtml(loc)}">
+      <div class="location-card-top">
+        <div class="location-name">${escapeHtml(loc)}</div>
+        <div class="chev">›</div>
+      </div>
+      <div class="location-count">${counts[loc]} animal${counts[loc]===1?'':'s'}</div>
+    </div>`;
+  });
+  if(unset){
+    html += `<div class="location-card" data-loc="__unset">
+      <div class="location-card-top">
+        <div class="location-name">Not Set</div>
+        <div class="chev">›</div>
+      </div>
+      <div class="location-count">${unset} animal${unset===1?'':'s'}</div>
+    </div>`;
+  }
+  html += `</div>`;
+
+  $('main').innerHTML = html;
+  document.querySelectorAll('.location-card').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      view.locationFilter = el.dataset.loc;
+      renderHome();
+    });
+  });
+}
+
+function renderLocationDetail(loc){
+  const isUnset = loc === '__unset';
+  const active = state.animals.filter(a => (a.Status||'Active')==='Active');
+  const animals = active.filter(a => isUnset ? !a.Location : a.Location === loc)
+    .sort((a,b) => (a.Name||'').localeCompare(b.Name||''));
+
+  let html = `<div class="detail-header">
+    <button class="back-btn" id="locBackBtn">‹</button>
+    <div><div class="detail-name">${isUnset ? 'Not Set' : escapeHtml(loc)}</div></div>
+  </div>`;
+
+  if(!animals.length){
+    html += `<div class="empty">No animals here right now.</div>`;
+  } else {
+    html += `<div class="cow-list" style="margin-top:16px;">`;
+    animals.forEach(a => {
+      const avatar = a.PhotoUrl
+        ? `<img class="cow-photo" src="${escapeHtml(a.PhotoUrl)}" alt="">`
+        : `<div class="ear-tag">${a.AnimalID}</div>`;
+      html += `<div class="cow-card" data-id="${a.AnimalID}">
+        ${avatar}
+        <div class="cow-info">
+          <div class="cow-name">${escapeHtml(a.Name)}</div>
+          <div class="cow-genetics">${(a.Sex||'Female')==='Female'?'Female':'Male'}${a.BirthDate ? ' · Born '+fmtDate(a.BirthDate) : ''}</div>
+        </div>
+        <div class="chev">›</div>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  $('main').innerHTML = html;
+  $('locBackBtn').addEventListener('click', ()=>{ view.locationFilter = null; renderHome(); });
+  document.querySelectorAll('.cow-card').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const a = state.animals.find(x => String(x.AnimalID) === el.dataset.id);
+      view.tab = (a.Sex==='Male') ? 'male' : 'female';
+      view.screen = 'detail'; view.animalId = el.dataset.id;
+      render();
+    });
+  });
+}
+
 function renderDetail(animalId){
   $('topHeader').style.display = 'none';
   $('fabAdd').classList.add('hidden');
@@ -866,6 +1173,7 @@ function renderDetail(animalId){
     .sort((x,y) => new Date(y.Date) - new Date(x.Date));
 
   let metaRow = '';
+  if(a.Location) metaRow += `<span>📍 ${escapeHtml(a.Location)}</span>`;
   if(a.WeaningDate) metaRow += `<span>Weaned ${fmtDate(a.WeaningDate)}</span>`;
   if(!isFemale && a.CastrationDate) metaRow += `<span>Castrated ${fmtDate(a.CastrationDate)}</span>`;
 
@@ -1037,6 +1345,7 @@ document.querySelectorAll('.tab').forEach(t=>{
     view.screen = 'home';
     view.sort = null;
     view.filter = null;
+    view.locationFilter = null;
     renderHome();
   });
 });
@@ -1070,6 +1379,13 @@ function openCowSheet(animal){
   $('cowNotes').value = animal ? animal.Notes : '';
   $('castrationField').classList.toggle('show', $('cowSex').value === 'Male');
 
+  const currentLocation = animal ? (animal.Location||'') : '';
+  let locOptions = '<option value="">— Not set —</option>';
+  LOCATIONS.forEach(loc => {
+    locOptions += `<option value="${escapeHtml(loc)}" ${loc===currentLocation?'selected':''}>${escapeHtml(loc)}</option>`;
+  });
+  $('cowLocation').innerHTML = locOptions;
+
   const currentDamId = animal ? animal.DamID : '';
   const females = state.animals.filter(x => (x.Sex||'Female')==='Female' && String(x.AnimalID) !== String(animal?animal.AnimalID:''));
   let damOptions = '<option value="">— Unknown / not in herd —</option>';
@@ -1097,6 +1413,7 @@ $('saveCowBtn').addEventListener('click', async ()=>{
     SireBreed:$('cowSireBreed').value.trim(),
     WeaningDate:$('cowWeaning').value,
     CastrationDate:$('cowCastration').value,
+    Location:$('cowLocation').value,
     Sex:$('cowSex').value
   };
   $('saveCowBtn').disabled = true;
@@ -1264,6 +1581,7 @@ $('saveBreedBtn').addEventListener('click', async ()=>{
         RecordID: recordId,
         DamID: animalId,
         DamGenetics: animal ? animal.Genetics : '',
+        DamLocation: animal ? (animal.Location||'') : '',
         Breed: payload.Breed,
         Sire: payload.Sire,
         calves: calves
